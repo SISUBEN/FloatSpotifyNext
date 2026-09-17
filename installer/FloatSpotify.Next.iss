@@ -105,14 +105,17 @@ begin
        '', SW_HIDE, ewWaitUntilTerminated, ResultCode);
 end;
 
-{ 安装/卸载前若程序在运行，先征求用户同意。 }
+{ 安装/卸载前若程序在运行，先征求用户同意。
+  安装界面目前只有英文（见 [Languages]），所以这里写双语：
+  英文在前跟界面一致，中文在后照顾中文用户。 }
 function CloseRunningApp(): Boolean;
 begin
   Result := True;
   if CheckForMutexes('{#AppMutex}') then
   begin
-    if MsgBox('FloatSpotify Next 正在运行，需要先关闭才能继续。' + #13#10 + #13#10 +
-              '是否立即关闭？', mbConfirmation, MB_YESNO) = IDYES then
+    if MsgBox('FloatSpotify Next is still running and must be closed before setup can continue.' + #13#10 +
+              'FloatSpotify Next 正在运行，需要先关闭才能继续。' + #13#10 + #13#10 +
+              'Close it now?  /  是否立即关闭？', mbConfirmation, MB_YESNO) = IDYES then
       KillApp()
     else
       Result := False;
