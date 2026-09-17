@@ -1,196 +1,241 @@
-# FloatSpotify Next
+<div align="center">
+  <img src="src/FloatSpotify/Assets/app-icon.png" width="180" alt="FloatSpotify Next icon" />
+  <h1>FloatSpotify Next</h1>
+  <p><strong>让歌词悬浮在桌面，让音乐始终留在眼前。</strong></p>
+  <p>一款轻量、透明、可定制的 Windows 桌面歌词组件，支持 Spotify 与 YouTube Music。</p>
+  <p>
+    <a href="https://www.microsoft.com/windows"><img src="https://img.shields.io/badge/platform-Windows%2010%2B-0078D4?style=flat-square&amp;logo=windows11&amp;logoColor=white" alt="Windows 10+" /></a>
+    <a href="https://dotnet.microsoft.com/"><img src="https://img.shields.io/badge/.NET-8.0-512BD4?style=flat-square&amp;logo=dotnet&amp;logoColor=white" alt=".NET 8" /></a>
+    <a href="https://learn.microsoft.com/dotnet/desktop/wpf/"><img src="https://img.shields.io/badge/UI-WPF-0C54C2?style=flat-square" alt="WPF" /></a>
+    <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22C55E?style=flat-square" alt="MIT License" /></a>
+  </p>
+  <p>
+    <a href="https://github.com/SISUBEN/FloatSpotifyNext/releases/latest"><strong>下载最新版</strong></a> ·
+    <a href="#快速开始">快速开始</a> ·
+    <a href="#配置-spotify">配置 Spotify</a> ·
+    <a href="#参与开发">参与开发</a>
+  </p>
+</div>
 
-Windows 桌面悬浮歌词组件。透明、置顶、可拖动的悬浮层，实时显示当前播放歌曲的同步歌词——不用切窗口就能跟着唱。
+---
 
-<!-- 换成你自己的截图 -->
-<!-- <img width="960" alt="FloatSpotify Next" src="docs/screenshot.png"> -->
+## 为什么选择 FloatSpotify Next？
 
-## 功能
+| 🎵 沉浸歌词 | ✨ 逐字同步 | 🪶 轻量原生 |
+| :--- | :--- | :--- |
+| 透明、置顶、自由拖动，不切窗口也能跟唱。 | 有词级时间轴时平滑扫亮；缺失时自动回退逐行歌词。 | 原生 .NET 8 + WPF，不依赖 Python 服务或额外 UI 框架。 |
+| **🎧 双播放源** | **🎨 高度可定制** | **🖱️ 无干扰交互** |
+| 同时支持 Spotify 与 YouTube Music，一键切换。 | 字号、颜色、发光、透明度、宽度和位置均可调整。 | 锁定后鼠标穿透；托盘菜单随时唤回、解锁或退出。 |
 
-- **悬浮歌词**：透明背景、始终置顶，可自由拖动到屏幕任意位置
-- **逐字同步**：有真实词/音节时间轴时平滑扫亮当前词，未唱部分弱化；没有词级数据时回退逐行同步，可选显示下一行
-- **双播放源**：Spotify 与 YouTube Music，设置里一键切换
-- **宽度可调**：160–1600 px，拖动悬浮层右侧竖条即可实时调整
-- **外观自定义**：字号 22–96、RGB 取色、发光效果、透明度
-- **位置预设**：自由拖动 / 顶部居中 / 屏幕中央 / 底部居中 / 四角
-- **锁定模式**：锁定后窗口鼠标穿透，完全不挡操作
-- **歌词偏移**：按歌曲单独记忆偏移量（±5 秒），个别歌词对不上时手动校准
-- **单实例**：重复启动会提示，托盘图标可随时唤回歌词
+### 核心能力
 
-## 播放源
+- **多级歌词体验**：逐字同步 → 逐行同步 → 未同步全文，按数据质量自然降级。
+- **智能歌词匹配**：综合歌曲名、歌手、时长与版本信息，降低错误版本覆盖正确歌词的概率。
+- **多源竞速与容错**：基础源优先显示，增强源异步升级；单个服务失败不会中断播放体验。
+- **独立歌曲偏移**：每首歌曲单独保存 ±5 秒校准值。
+- **位置预设**：自由拖动、顶部/底部居中、屏幕中央及四角定位。
+- **单实例与托盘**：重复启动提示，隐藏后可从系统托盘恢复。
 
-### Spotify
+## 快速开始
 
-走官方 Web API（PKCE 授权，无需 Client Secret）。需要你自己提供一个 Spotify Client ID，步骤见下方「配置 Spotify」。
+### 1. 下载
 
-播放控制（上一首 / 暂停 / 下一首）通过 API 实现。
+前往 [Releases](https://github.com/SISUBEN/FloatSpotifyNext/releases/latest)，根据使用场景选择安装包：
 
-### YouTube Music
+| 版本 | 适用场景 | .NET 8 桌面运行时 |
+| :--- | :--- | :---: |
+| `setup-online.exe` | 推荐；体积最小，安装时按需下载运行时 | 自动检测 |
+| `setup-offline.exe` | 离线安装或批量部署 | 已内置 |
+| `portable.zip` | 绿色便携，解压即用 | 已内置 |
+| `framework.zip` | 已安装 .NET 8、希望下载体积最小 | 需要预装 |
 
-**不需要任何 Google 授权**。读取 Windows 系统媒体会话（GSMTC），所以浏览器里放的 YouTube Music 也能识别。支持 Chrome、Edge、Firefox、Brave、Opera、Vivaldi，以及已安装的 YouTube Music PWA。
+> [!IMPORTANT]
+> 两个 ZIP 版本必须完整解压后再运行 `FloatSpotify.Next.exe`，不要直接在压缩包内启动。
 
-播放控制同样走系统媒体会话，无需额外配置。
+### 2. 选择播放源
 
-> 如果浏览器同时播放多个媒体标签页，请暂停其他标签页，确保应用选中正在播放音乐的那个会话。
+- **YouTube Music**：无需 Google 授权。应用通过 Windows 系统媒体会话读取 Chrome、Edge、Firefox、Brave、Opera、Vivaldi 或 YouTube Music PWA 的播放状态。
+- **Spotify**：使用官方 Web API 与 PKCE 授权，需要配置自己的 Spotify Client ID。
 
-## 歌词源与降级
+### 3. 开始使用
 
-- 沿用原有 WPF / MVVM、播放引擎、`ILyricsProvider`、源开关和排序，无新增服务器或 UI 框架。
-- **有歌词优先**：先查询已启用的基础源（LRCLIB / 可选网易云），拿到歌词立即交给界面；随后查询 Karalyr / Better Lyrics 增强源，失败保留原歌词，不让效果查询阻塞显示。同类源之间遵循用户排序。网易云仍默认关闭，已有开关与顺序保留，全部关闭时不发请求。
-- “可用”首先要求版本相符。明确标注 English/Chinese/Japanese/Korean Ver. 的曲目会检查返回标题及歌词文字脚本；错误语言不会覆盖正确语言的低同步级别结果。完整版本标题继续参与缓存键，v5 缓存重新获取旧数据。这是针对明显错配的脚本校验，不是通用语言识别。
-- 无歌词/加载状态保留文字和最小拖动区域；未锁定时预览鼠标事件负责拖动、点击，普通歌词内容不截获鼠标。未同步全文的滚动条保留原生操作，锁定仍保持穿透。
-- 没有同步歌词时也保留 LRCLIB 的普通文本，可滚动阅读，明确标为未同步。暂停冻结、跳转进度重定位，歌词偏移同时作用于行和词。动画使用 WPF 渲染帧，不增加播放接口轮询频率。
-- 每源 3 秒超时；404/401/空结果顺延，429 尊重 `Retry-After`，网络和解析错误隔离并短暂熔断。无歌词的当前歌曲每 30 秒重新检查；仍尊重限流冷却及 5 分钟的缺失结果缓存，不重复请求未命中接口。
-- 磁盘缓存按源、歌手、歌名、时长区分，保存词级时间轴；逐字结果 7 天、行级结果 1 天过期，旧 v3 缓存自然失效。当前播放元数据接口没有传递专辑，本次不扩展该接口。
-- Enhanced LRC 缺少最后一个词的结束标记时，使用下一行/歌曲结束边界；连边界也缺失时降为行级，不均分整行伪造词时间。
-- TTML 支持该服务的绝对时钟时间与带 begin/end 的分组 div、嵌套词 span，保留空格；背景人声/翻译不拼入主唱行。词时间范围异常时保留该行而不丢弃整首；已返回的匹配分低于 80 时不采用。
-- 全部源都没有可用文本时显示歌曲信息和自动重试提示。未引入 lyrics.ovh 或新的非官方 KuGou 服务，也不把普通文本伪装成逐字歌词。
-- API 依据：[Karalyr 文档](https://www.karalyr.com/docs)、[Better Lyrics 格式](https://lyrics-api-docs.boidu.dev/docs/response-format/)、[匿名缓存与鉴权](https://lyrics-api-docs.boidu.dev/docs/authentication/)。实际歌曲的逐字覆盖取决于上游。
+| 操作 | 效果 |
+| :--- | :--- |
+| 单击歌词 | 打开或收起控制条 |
+| 拖动歌词 | 移动悬浮层 |
+| 调整“歌词宽度” | 将悬浮层宽度设为 160–1600 px |
+| 点击锁定 | 开启鼠标穿透，避免遮挡操作 |
+| 右击托盘图标 | 显示歌词、打开设置、解锁、重新授权或退出 |
 
-开发回归（无测试框架 NuGet 依赖；包含模拟 HTTP、解析、缓存、设置迁移和 WPF 像素验证）：
+## 配置 Spotify
+
+FloatSpotify Next 使用 Spotify 官方 Web API，不内置开发者 Client ID，也不需要 Client Secret。
+
+1. 登录 [Spotify Developer Dashboard](https://developer.spotify.com/dashboard)。
+2. 点击 **Create app**；如需选择 API，选择 **Web API**。
+3. 在应用的 **Settings → Redirect URIs** 中添加：
+
+   ```text
+   http://127.0.0.1:8888/callback
+   ```
+
+4. 保存设置并复制页面上的 32 位 **Client ID**。
+5. 打开 FloatSpotify Next 设置，将 Client ID 粘贴到输入框。
+6. 点击“使用此 Client ID 授权 Spotify”，在浏览器中完成登录授权。
+
+Client ID 会保存到用户环境变量 `FLOATSPOTIFY_SPOTIFY_CLIENT_ID`，不会写入程序目录。授权会话保存在当前用户的本地应用数据目录中。
+
+> [!TIP]
+> 设置界面的 `?` 按钮可以随时打开应用内配置指南。使用自己的 Spotify 应用也能避免发布者账号白名单限制。
+
+## 数据与隐私
+
+设置、Spotify 会话和歌词缓存仅保存在本机：
+
+```text
+%LocalAppData%\FloatSpotify.Next\
+├─ settings.json          # 界面与行为设置
+├─ spotify-session.json   # Spotify 授权会话
+└─ lyrics\                # 按来源、歌手、曲名和时长划分的歌词缓存
+```
+
+卸载应用不会删除该目录，因此重新安装后通常无需再次授权。如需彻底清理，可手动删除该目录。
+
+## 工作原理
+
+```mermaid
+flowchart LR
+    A[Spotify Web API] --> C[PlaybackCoordinator]
+    B[Windows GSMTC<br/>YouTube Music] --> C
+    C --> D[LyricsCoordinator]
+    D --> E[基础歌词源]
+    D --> F[增强歌词源]
+    E --> G[缓存与版本匹配]
+    F --> G
+    G --> H[OverlayViewModel]
+    H --> I[WPF 悬浮歌词]
+```
+
+<details>
+<summary><strong>歌词获取、匹配与降级策略</strong></summary>
+
+- 已启用的基础源（LRCLIB / 可选网易云）优先返回可用歌词，Karalyr / Better Lyrics 增强源随后尝试升级为逐字结果。同类来源遵循用户排序；全部关闭时不发送请求。
+- 明确标注 English / Chinese / Japanese / Korean Ver. 的曲目会校验返回标题和歌词文字脚本，避免错误语言覆盖正确的低同步级别结果。完整版本标题参与缓存键。
+- 每个来源默认 3 秒超时。`404`、`401`、空结果、网络或解析错误会隔离处理；`429` 尊重 `Retry-After` 并进入短暂冷却。
+- 当前歌曲没有歌词时每 30 秒重新检查，同时遵守限流冷却和 5 分钟未命中缓存。
+- 逐字结果缓存 7 天，逐行结果缓存 1 天。缓存按来源、歌手、歌名和时长区分。
+- Enhanced LRC 缺少末词结束时间时，优先使用下一行或歌曲结束边界；边界不足时回退为行级，不伪造平均词时长。
+- TTML 支持绝对时钟、带 `begin` / `end` 的分组与嵌套词级 `span`，并保留空格。背景人声和翻译不会混入主唱行。
+- 无同步歌词时仍显示可滚动的普通文本；完全没有文本时显示歌曲信息与自动重试提示。
+
+歌词格式与接口参考：[Karalyr 文档](https://www.karalyr.com/docs)、[Better Lyrics 响应格式](https://lyrics-api-docs.boidu.dev/docs/response-format/)、[Better Lyrics 鉴权说明](https://lyrics-api-docs.boidu.dev/docs/authentication/)。实际逐字覆盖率取决于上游服务。
+
+</details>
+
+## 参与开发
+
+### 环境要求
+
+- Windows 10 build 17763（1809）或更高版本
+- [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)
+- Visual Studio 2022（可选，用于 XAML 设计与调试）
+
+### 获取并构建
+
+```powershell
+git clone https://github.com/SISUBEN/FloatSpotifyNext.git
+cd FloatSpotifyNext
+dotnet build src/FloatSpotify/FloatSpotify.csproj -c Release
+```
+
+也可以使用 Visual Studio 打开 `FloatSpotify.Next.sln`。
+
+### 项目结构
+
+```text
+FloatSpotifyNext/
+├─ src/FloatSpotify/
+│  ├─ Playback/       # 播放引擎、歌词来源、解析、匹配与缓存
+│  ├─ ViewModels/     # MVVM 状态与命令
+│  ├─ Windows/        # 悬浮层、控制条、设置和自定义渲染
+│  ├─ Storage/        # 设置模型与持久化
+│  └─ Assets/         # 应用图标等静态资源
+├─ tests/             # 无测试框架依赖的可执行回归套件
+├─ build/             # 发布与打包脚本
+├─ installer/         # Inno Setup 配置
+└─ artifacts/         # 本地生成的测试证据与发布产物
+```
+
+新增播放源时，实现 `IPlaybackEngine`，扩展 `PlaybackSource`，再接入 `PlaybackCoordinator`。新增歌词源时，实现 `ILyricsProvider` 并接入 `LyricsCoordinator`。
+
+### 运行回归测试
 
 ```powershell
 dotnet run --project tests/FloatSpotify.Lyrics.Tests -c Release -- artifacts/lyrics-word-sync
 ```
 
-渲染证据使用自建测试歌词，不代表真实歌曲命中或播放器端到端验收。
+测试套件包含模拟 HTTP、歌词解析、缓存、设置迁移、播放时间轴和 WPF 像素验证。生成的渲染证据使用自建测试歌词，不代表真实歌曲命中率或播放器端到端验收结果。
 
-## 系统要求
+### 提交规范
 
-- Windows 10 build 17763（1809）或更高版本，x64
-- 运行时的要求取决于你选的安装方式，见下表
+项目采用 Conventional Commits：
 
-## 安装
-
-产物命名统一为 `FloatSpotifyNext-x86_64-v<版本>-<变体>.<扩展名>`。
-
-| 方式 | 下载体积 | 需要 .NET 8 桌面运行时 |
-|---|---|---|
-| 在线安装包 | 约 6 MB | 安装程序自动检测，缺失才联网下载（约 55 MB） |
-| 离线安装包 | 约 51 MB | 不需要，已内置 |
-| 便携版 zip | 约 64 MB | 不需要，已内置 |
-| 框架依赖版 zip | 约 7 MB | **必须预先自行安装**（约 55 MB） |
-
-### 方式一：在线安装包（推荐）
-
-下载 `FloatSpotifyNext-x86_64-v<版本>-setup-online.exe` 并运行。安装程序会检测 .NET 8 桌面运行时，已装则直接安装，未装才联网下载。**安装过程需要联网和管理员权限。**
-
-### 方式二：离线安装包
-
-下载 `FloatSpotifyNext-x86_64-v<版本>-setup-offline.exe` 并运行。完全离线可用，不依赖网络，适合无网环境或批量部署。
-
-### 方式三：便携版（自包含）
-
-下载 `FloatSpotifyNext-x86_64-v<版本>-portable.zip`，**完整解压后**运行里面的 `FloatSpotify.Next.exe`。自带运行时，换机器不用装任何东西。
-
-### 方式四：框架依赖版
-
-下载 `FloatSpotifyNext-x86_64-v<版本>-framework.zip`，**完整解压后**运行里面的 `FloatSpotify.Next.exe`。体积最小，但**要求先装好 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)**，否则双击没反应。
-
-> 两个 zip 都不能在压缩包里直接双击运行——必须解压。详见包内 `README-PORTABLE.txt`。
-
-两个安装包会创建开始菜单快捷方式、注册卸载项，并可选创建桌面快捷方式；两个 zip 是绿色版，解压即用，不写注册表、不建快捷方式。
-
-## 使用
-
-- **单击歌词**：打开 / 关闭控制条
-- **拖动歌词**：移动悬浮层位置
-- **调整宽度**：只能用控制条里的「歌词宽度」滑块（没有拖拽条）
-- **锁定按钮**：锁定后鼠标穿透，点不到歌词
-- **托盘图标**：右键可显示歌词、打开设置、解锁、重新授权 Spotify、退出
-
-### 数据存放位置
-
-设置、Spotify 会话和歌词缓存都在：
-
-```
-%LocalAppData%\FloatSpotify.Next\
-├─ settings.json          界面与行为设置
-├─ spotify-session.json   Spotify 授权令牌
-└─ lyrics\                歌词缓存（按源、歌手、曲名、时长区分）
+```text
+feat(lyrics): add word-level timing
+fix(playback): preserve position after source switch
+docs: improve Spotify setup guide
 ```
 
-**卸载不会删除这个目录**，所以重装后无需重新授权 Spotify。想彻底清理请手动删除该文件夹。
-
-## 配置 Spotify
-
-发布包**不内置任何人的 Client ID**，需要你自己申请一个（免费，几分钟）：
-
-1. 打开 <https://developer.spotify.com/dashboard> 并登录
-2. 点击 **Create app**；如果页面询问要使用的 API，选择 **Web API**
-3. 打开该 App 的 **Settings**，在 **Redirect URIs** 中加入并保存：
-
-   ```
-   http://127.0.0.1:8888/callback
-   ```
-
-4. 复制 App 页面上显示的 **32 位 Client ID**（不要复制 Client Secret，本应用用不到）
-5. 打开 FloatSpotify 设置，把 Client ID 粘进输入框，点击「使用此 Client ID 授权 Spotify」
-6. 浏览器会打开 Spotify 授权页，登录并同意即可
-
-Client ID 保存在用户环境变量 `FLOATSPOTIFY_SPOTIFY_CLIENT_ID` 中，不会写进程序目录。设置里的「?」按钮可随时打开应用内配置指南。
-
-使用自己的 Spotify 应用还能避开发布者账号白名单的限制。
-
-## 从源码构建
-
-需要 [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0)。
-
-```sh
-dotnet build src/FloatSpotify/FloatSpotify.csproj -c Release
-```
-
-或用 Visual Studio 打开 `FloatSpotify.Next.sln`。
-
-### 项目结构
-
-```
-src/FloatSpotify/
-├─ Playback/      播放源抽象与实现
-│  ├─ IPlaybackEngine.cs          播放源接口
-│  ├─ PlaybackCoordinator.cs      按播放源路由
-│  ├─ SpotifyPlaybackEngine.cs    Spotify 实现
-│  ├─ YouTubeMusicPlaybackEngine.cs  YouTube Music 实现（系统媒体会话）
-│  ├─ LrclibLyricsProvider.cs     歌词抓取与缓存
-│  └─ SpotifyAuthClient.cs        PKCE 授权
-├─ ViewModels/    状态与设置绑定
-├─ Windows/       悬浮层、控制条、授权引导窗口
-└─ Storage/       设置持久化
-```
-
-新增播放源的步骤：实现 `IPlaybackEngine`，在 `PlaybackSource` 枚举中加一个值，然后把新引擎接进 `PlaybackCoordinator`。
-
-## 发布新版本
-
-需要 [Inno Setup 6](https://jrsoftware.org/isdl.php)（仅在线/离线安装包需要，`winget install JRSoftware.InnoSetup` 可装）。
+运行以下脚本可为当前克隆启用提交模板和校验钩子：
 
 ```powershell
-powershell -ExecutionPolicy Bypass -File build\build-release.ps1
+./tools/setup-git-hooks.ps1
 ```
 
-脚本会读取 csproj 里的 `<Version>`，产出四个产物到 `artifacts/`：
+完整规则见 [COMMIT_CONVENTION.md](COMMIT_CONVENTION.md)，面向代码代理的项目约束见 [AGENT.md](AGENT.md)。
 
-- `FloatSpotifyNext-x86_64-v<版本>-setup-online.exe`
-- `FloatSpotifyNext-x86_64-v<版本>-setup-offline.exe`
-- `FloatSpotifyNext-x86_64-v<版本>-portable.zip`
-- `FloatSpotifyNext-x86_64-v<版本>-framework.zip`
+## 构建发布包
 
-改版本号只需改 `src/FloatSpotify/FloatSpotify.csproj` 里的 `<Version>`，也可以临时用 `-Version 1.2.0` 覆盖。加 `-SkipInstallers` 可只出两个 zip。
+安装包构建还需要 [Inno Setup 6](https://jrsoftware.org/isdl.php)：
 
-> 命名规则固定在两处，改一处必须同步改另一处：`build\build-release.ps1` 里的 `$ProductName` / `$Arch`，
-> 与 `installer\FloatSpotify.Next.iss` 里的 `#define ProductName` / `#define Arch`。
+```powershell
+winget install JRSoftware.InnoSetup
+powershell -ExecutionPolicy Bypass -File build/build-release.ps1
+```
 
-> 关于体积：自包含发布约 165 MB（已裁掉 13 种本地化卫星程序集）。WPF 不支持 `PublishTrimmed`，所以无法进一步裁剪；体积大头是 .NET 运行时和 `Microsoft.Windows.SDK.NET.dll`（约 21 MB，YouTube Music 所需的 WinRT 投影）。
+脚本读取 `src/FloatSpotify/FloatSpotify.csproj` 中的 `<Version>`，并在 `artifacts/` 中生成：
+
+```text
+FloatSpotifyNext-x86_64-v<版本>-setup-online.exe
+FloatSpotifyNext-x86_64-v<版本>-setup-offline.exe
+FloatSpotifyNext-x86_64-v<版本>-portable.zip
+FloatSpotifyNext-x86_64-v<版本>-framework.zip
+```
+
+- 使用 `-Version 1.2.0` 可以临时覆盖项目版本。
+- 使用 `-SkipInstallers` 可以只生成两个 ZIP 包。
+- 修改产品名或架构名时，必须同步更新 `build/build-release.ps1` 与 `installer/FloatSpotify.Next.iss`。
+
+> [!NOTE]
+> WPF 不支持 `PublishTrimmed`。自包含版本已经通过限制框架卫星资源缩减体积，主要空间来自 .NET 运行时和 YouTube Music 所需的 WinRT 投影。
 
 ## 已知限制
 
-- 仅支持 Windows x64
-- 无自动更新，升级需重新运行安装包
-- 歌词来自 [lrclib.net](https://lrclib.net)，冷门曲目可能没有歌词
-- YouTube Music 模式依赖系统媒体会话，同时播放多个媒体源时可能选错会话
+- 当前仅提供 Windows x64 构建。
+- 暂无自动更新功能，升级需要重新运行安装包或替换便携版文件。
+- 冷门歌曲可能没有可用歌词，逐字歌词覆盖率由上游来源决定。
+- YouTube Music 依赖 Windows 系统媒体会话；多个浏览器标签页同时播放时可能选中错误会话。
 
 ## 致谢
 
-本项目最初 fork 自 [BitsJayMehta173/FloatSpotify](https://github.com/BitsJayMehta173/FloatSpotify)（WPF + Python Flask 后端方案）。当前版本是移除 Python 依赖后的完整重写，原方案代码已从仓库移除，仍可在上游仓库查阅。
+- 项目最初 fork 自 [BitsJayMehta173/FloatSpotify](https://github.com/BitsJayMehta173/FloatSpotify)。当前版本已移除原 Python Flask 后端并完成原生 .NET 重写。
+- 歌词数据与格式能力来自 LRCLIB、网易云、酷狗、Karalyr、Better Lyrics 等上游服务。
+- 感谢所有提交问题、测试歌词匹配和改进桌面体验的贡献者。
 
-歌词数据由 [lrclib.net](https://lrclib.net) 提供。
+## 许可证
+
+本项目基于 [MIT License](LICENSE) 开源。
+
+<div align="center">
+  <sub>Built with ♫ for people who like their lyrics close.</sub>
+</div>

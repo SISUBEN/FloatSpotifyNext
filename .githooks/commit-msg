@@ -1,0 +1,35 @@
+#!/bin/sh
+
+message_file="$1"
+subject=$(sed -n '1p' "$message_file" | tr -d '\r')
+
+# Preserve Git-generated and history-cleanup workflows.
+case "$subject" in
+  Merge\ *|Revert\ \"*|fixup\!\ *|squash\!\ *) exit 0 ;;
+esac
+
+pattern='^(feat|fix|docs|style|refactor|perf|test|build|ci|chore|revert)(\([a-z0-9][a-z0-9._/-]*\))?(!)?: [^[:space:]].*'
+
+if ! printf '%s\n' "$subject" | grep -Eq "$pattern"; then
+  cat >&2 <<'EOF'
+Invalid commit subject.
+
+Expected: type(optional-scope): imperative summary
+Example:  fix(lyrics): preserve fallback text on timeout
+
+Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci,
+chore, revert. See COMMIT_CONVENTION.md for details.
+EOF
+  exit 1
+fi
+
+if [ "${#subject}" -gt 72 ]; then
+  printf '%s\n' "Commit subject is ${#subject} characters; the limit is 72." >&2
+  exit 1
+fi
+
+case "$subject" in
+  *.) printf '%s\n' 'Commit subject must not end with a period.' >&2; exit 1 ;;
+esac
+
+exit 0

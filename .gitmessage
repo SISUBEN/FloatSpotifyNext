@@ -1,0 +1,11 @@
+# <type>(<optional-scope>)<optional-!>: <imperative summary>
+#
+# Examples:
+#   feat(lyrics): add word-level timing
+#   fix(playback): retain position after source switch
+#   docs: explain local build prerequisites
+#
+# Allowed types: feat, fix, docs, style, refactor, perf, test, build, ci,
+# chore, revert
+# Subject limit: 72 characters; no trailing period.
+# See COMMIT_CONVENTION.md for the full convention.
