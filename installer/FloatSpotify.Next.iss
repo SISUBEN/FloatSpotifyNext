@@ -23,13 +23,18 @@
 #define AppUrl        "https://github.com/SISUBEN/FloatSpotifyNext"
 #define AppMutex      "Local\FloatSpotify.Next"
 
+; 发布产物统一命名：{ProductName}-{Arch}-v{版本}-{变体}.{扩展名}
+; 例：FloatSpotifyNext-x86_64-v1.0.0-setup-offline.exe
+#define ProductName   "FloatSpotifyNext"
+#define Arch          "x86_64"
+
 #ifdef ONLINE
   #define PayloadDir  "..\artifacts\publish\framework-dependent"
-  #define BuildKind   "Online"
+  #define Variant     "setup-online"
   #define RuntimeUrl  "https://aka.ms/dotnet/8.0/windowsdesktop-runtime-win-x64.exe"
 #else
   #define PayloadDir  "..\artifacts\publish\self-contained"
-  #define BuildKind   "Offline"
+  #define Variant     "setup-offline"
 #endif
 
 [Setup]
@@ -53,7 +58,7 @@ UninstallDisplayIcon={app}\{#AppExeName}
 ; 安装程序自身的图标，与主程序共用同一个 .ico（路径相对本脚本所在目录）。
 SetupIconFile=..\src\FloatSpotify\Assets\app.ico
 OutputDir=Output
-OutputBaseFilename=FloatSpotify.Next-{#AppVersion}-Setup-{#BuildKind}
+OutputBaseFilename={#ProductName}-{#Arch}-v{#AppVersion}-{#Variant}
 Compression=lzma2/max
 SolidCompression=yes
 WizardStyle=modern

@@ -8,13 +8,18 @@ FloatSpotify Next - Windows x64 便携版
 3. 点击悬浮歌词打开设置，选择 Spotify 或 YouTube Music。
 4. 使用 Spotify 时，填写你自己的 Spotify Client ID，然后点击授权按钮。
 
-本版本为自包含单文件，已内置 .NET 8 运行时，无需另行安装 .NET。
 不需要安装、不写注册表，删掉文件夹即可卸载。
 
-如果你更希望走安装流程（开始菜单快捷方式、卸载项、自动补运行时），
-请到 Releases 页面下载 Setup-Online 或 Setup-Offline 安装包。
+关于 .NET 运行时，看包内文件就能分辨：
+- 只有 FloatSpotify.Next.exe 和本说明 → 自包含便携版，已内置 .NET 8，无需另行安装。
+- 除 EXE 外还有一堆 .dll → 框架依赖版，需要你先装好 .NET 8 桌面运行时
+  （https://dotnet.microsoft.com/download/dotnet/8.0），否则双击没反应。
 
-悬浮歌词未锁定时，可以拖动右侧竖条调整宽度（160–1600 px）；也可以在设置中使用“歌词宽度”滑块。
+如果你更希望走安装流程（开始菜单快捷方式、卸载项、自动补运行时），
+请到 Releases 页面下载 setup-online 或 setup-offline 安装包
+（文件名形如 FloatSpotifyNext-x86_64-v1.0.0-setup-online.exe）。
+
+悬浮歌词未锁定时，用设置里的“歌词宽度”滑块调整宽度（160–1600 px）。
 设置还提供字号、字体、RGB 颜色以及顶部、中央、底部和四角位置预设；选择“自由拖动”可手动放置。
 点“锁定”后窗口鼠标穿透，不会挡住任何操作；可从托盘图标解锁。
 

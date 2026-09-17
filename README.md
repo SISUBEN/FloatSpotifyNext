@@ -62,33 +62,40 @@ dotnet run --project tests/FloatSpotify.Lyrics.Tests -c Release -- artifacts/lyr
 
 ## 安装
 
+产物命名统一为 `FloatSpotifyNext-x86_64-v<版本>-<变体>.<扩展名>`。
+
 | 方式 | 下载体积 | 需要 .NET 8 桌面运行时 |
 |---|---|---|
-| 在线安装包 | 约 10–20 MB | 安装程序自动检测，缺失才联网下载（约 55 MB） |
-| 离线安装包 | 约 70 MB | 不需要，已内置 |
-| 便携版 zip | 约 70 MB | 不需要，已内置 |
+| 在线安装包 | 约 6 MB | 安装程序自动检测，缺失才联网下载（约 55 MB） |
+| 离线安装包 | 约 51 MB | 不需要，已内置 |
+| 便携版 zip | 约 64 MB | 不需要，已内置 |
+| 框架依赖版 zip | 约 7 MB | **必须预先自行安装**（约 55 MB） |
 
 ### 方式一：在线安装包（推荐）
 
-下载 `FloatSpotify.Next-<版本>-Setup-Online.exe` 并运行。安装程序会检测 .NET 8 桌面运行时，已装则直接安装，未装才联网下载。**安装过程需要联网和管理员权限。**
+下载 `FloatSpotifyNext-x86_64-v<版本>-setup-online.exe` 并运行。安装程序会检测 .NET 8 桌面运行时，已装则直接安装，未装才联网下载。**安装过程需要联网和管理员权限。**
 
 ### 方式二：离线安装包
 
-下载 `FloatSpotify.Next-<版本>-Setup-Offline.exe` 并运行。完全离线可用，不依赖网络，适合无网环境或批量部署。
+下载 `FloatSpotifyNext-x86_64-v<版本>-setup-offline.exe` 并运行。完全离线可用，不依赖网络，适合无网环境或批量部署。
 
-### 方式三：便携版
+### 方式三：便携版（自包含）
 
-下载 `FloatSpotify.Next-<版本>-Portable-win-x64.zip`，**完整解压后**运行里面的 `FloatSpotify.Next.exe`。
+下载 `FloatSpotifyNext-x86_64-v<版本>-portable.zip`，**完整解压后**运行里面的 `FloatSpotify.Next.exe`。自带运行时，换机器不用装任何东西。
 
-> 不能直接在压缩包里双击运行——必须解压。详见包内 `README-PORTABLE.txt`。
+### 方式四：框架依赖版
 
-三种方式都会在开始菜单创建快捷方式；安装包版本还会注册卸载项，并可选创建桌面快捷方式。
+下载 `FloatSpotifyNext-x86_64-v<版本>-framework.zip`，**完整解压后**运行里面的 `FloatSpotify.Next.exe`。体积最小，但**要求先装好 [.NET 8 桌面运行时](https://dotnet.microsoft.com/download/dotnet/8.0)**，否则双击没反应。
+
+> 两个 zip 都不能在压缩包里直接双击运行——必须解压。详见包内 `README-PORTABLE.txt`。
+
+两个安装包会创建开始菜单快捷方式、注册卸载项，并可选创建桌面快捷方式；两个 zip 是绿色版，解压即用，不写注册表、不建快捷方式。
 
 ## 使用
 
 - **单击歌词**：打开 / 关闭控制条
 - **拖动歌词**：移动悬浮层位置
-- **拖右侧竖条**：调整歌词宽度（未锁定时可用，也可用设置里的滑块）
+- **调整宽度**：只能用控制条里的「歌词宽度」滑块（没有拖拽条）
 - **锁定按钮**：锁定后鼠标穿透，点不到歌词
 - **托盘图标**：右键可显示歌词、打开设置、解锁、重新授权 Spotify、退出
 
@@ -161,13 +168,17 @@ src/FloatSpotify/
 powershell -ExecutionPolicy Bypass -File build\build-release.ps1
 ```
 
-脚本会读取 csproj 里的 `<Version>`，产出三个产物到 `artifacts/`：
+脚本会读取 csproj 里的 `<Version>`，产出四个产物到 `artifacts/`：
 
-- `FloatSpotify.Next-<版本>-Setup-Online.exe`
-- `FloatSpotify.Next-<版本>-Setup-Offline.exe`
-- `FloatSpotify.Next-<版本>-Portable-win-x64.zip`
+- `FloatSpotifyNext-x86_64-v<版本>-setup-online.exe`
+- `FloatSpotifyNext-x86_64-v<版本>-setup-offline.exe`
+- `FloatSpotifyNext-x86_64-v<版本>-portable.zip`
+- `FloatSpotifyNext-x86_64-v<版本>-framework.zip`
 
-改版本号只需改 `src/FloatSpotify/FloatSpotify.csproj` 里的 `<Version>`，也可以临时用 `-Version 1.2.0` 覆盖。加 `-SkipInstallers` 可只出便携版。
+改版本号只需改 `src/FloatSpotify/FloatSpotify.csproj` 里的 `<Version>`，也可以临时用 `-Version 1.2.0` 覆盖。加 `-SkipInstallers` 可只出两个 zip。
+
+> 命名规则固定在两处，改一处必须同步改另一处：`build\build-release.ps1` 里的 `$ProductName` / `$Arch`，
+> 与 `installer\FloatSpotify.Next.iss` 里的 `#define ProductName` / `#define Arch`。
 
 > 关于体积：自包含发布约 165 MB（已裁掉 13 种本地化卫星程序集）。WPF 不支持 `PublishTrimmed`，所以无法进一步裁剪；体积大头是 .NET 运行时和 `Microsoft.Windows.SDK.NET.dll`（约 21 MB，YouTube Music 所需的 WinRT 投影）。
 

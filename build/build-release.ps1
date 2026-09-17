@@ -6,11 +6,16 @@
 .DESCRIPTION
     Produces, under artifacts/:
       publish\self-contained        payload for the offline installer
-      publish\framework-dependent   payload for the online installer
+      publish\framework-dependent   payload for the online installer + the framework zip
       publish\portable              single-file portable build
-      FloatSpotify.Next-<ver>-Portable-win-x64.zip
-      FloatSpotify.Next-<ver>-Setup-Offline.exe   (needs Inno Setup 6)
-      FloatSpotify.Next-<ver>-Setup-Online.exe    (needs Inno Setup 6)
+      FloatSpotifyNext-x86_64-v<ver>-portable.zip
+      FloatSpotifyNext-x86_64-v<ver>-framework.zip
+      FloatSpotifyNext-x86_64-v<ver>-setup-offline.exe   (needs Inno Setup 6)
+      FloatSpotifyNext-x86_64-v<ver>-setup-online.exe    (needs Inno Setup 6)
+
+    Artifact naming is fixed as {ProductName}-{Arch}-v{Version}-{variant}.{ext}.
+    Keep $ProductName / $Arch below in sync with the same #defines in
+    installer\FloatSpotify.Next.iss.
 
     Installer compilation is skipped automatically when ISCC.exe is not found.
 
@@ -87,11 +92,28 @@ Invoke-Publish -Profile 'Windows-x64' -OutDir $selfContained
 Invoke-Publish -Profile 'FrameworkDependent-x64' -OutDir $frameworkDependent
 Invoke-Publish -Profile 'Portable-SingleFile' -OutDir $portable
 
-# ---- Portable zip ----
-$portableZip = Join-Path $artifacts "FloatSpotify.Next-$Version-Portable-win-x64.zip"
-Write-Host '==> Packaging portable zip' -ForegroundColor Cyan
-Compress-Archive -Path (Join-Path $portable '*') -DestinationPath $portableZip -CompressionLevel Optimal
-Write-Host ''
+# ---- Zip packages ----
+# 产物命名统一为 {ProductName}-{Arch}-v{Version}-{variant}.{ext}
+# 改这里的同时要改 installer\FloatSpotify.Next.iss 里的同名 #define，否则安装包和 zip 会两套名字。
+$ProductName = 'FloatSpotifyNext'
+$Arch = 'x86_64'
+
+function New-ArtifactZip {
+    param(
+        [Parameter(Mandatory)] [string]$SourceDir,
+        [Parameter(Mandatory)] [string]$Variant
+    )
+
+    $zip = Join-Path $artifacts "$ProductName-$Arch-v$Version-$Variant.zip"
+    Write-Host "==> Packaging '$Variant' zip" -ForegroundColor Cyan
+    Compress-Archive -Path (Join-Path $SourceDir '*') -DestinationPath $zip -CompressionLevel Optimal
+    Write-Host ''
+}
+
+# 自包含单文件：解压即用，不需要装运行时
+New-ArtifactZip -SourceDir $portable -Variant 'portable'
+# 框架依赖：体积最小，但要求用户已装 .NET 8 桌面运行时
+New-ArtifactZip -SourceDir $frameworkDependent -Variant 'framework'
 
 # ---- Installers ----
 $isccCandidates = @(
