@@ -10,6 +10,10 @@
     <a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-22C55E?style=flat-square" alt="MIT License" /></a>
   </p>
   <p>
+    <strong>简体中文</strong> ·
+    <a href="README.en.md">English</a>
+  </p>
+  <p>
     <a href="https://github.com/SISUBEN/FloatSpotifyNext/releases/latest"><strong>下载最新版</strong></a> ·
     <a href="#快速开始">快速开始</a> ·
     <a href="#配置-spotify">配置 Spotify</a> ·
@@ -30,6 +34,7 @@
 ### 核心能力
 
 - **多级歌词体验**：逐字同步 → 逐行同步 → 未同步全文，按数据质量自然降级。
+- **中英双语界面**：设置里可切换「跟随系统 / 简体中文 / English」，即时生效，无需重启。
 - **智能歌词匹配**：综合歌曲名、歌手、时长与版本信息，降低错误版本覆盖正确歌词的概率。
 - **多源竞速与容错**：基础源优先显示，增强源异步升级；单个服务失败不会中断播放体验。
 - **独立歌曲偏移**：每首歌曲单独保存 ±5 秒校准值。
@@ -62,6 +67,7 @@
 | 操作 | 效果 |
 | :--- | :--- |
 | 单击歌词 | 打开或收起控制条 |
+| 在设置首行切换语言 | 界面语言即时切换为简体中文或 English |
 | 拖动歌词 | 移动悬浮层 |
 | 调整“歌词宽度” | 将悬浮层宽度设为 160–1600 px |
 | 点击锁定 | 开启鼠标穿透，避免遮挡操作 |
@@ -155,6 +161,7 @@ dotnet build src/FloatSpotify/FloatSpotify.csproj -c Release
 ```text
 FloatSpotifyNext/
 ├─ src/FloatSpotify/
+│  ├─ Localization/   # 界面文案表与运行时语言切换
 │  ├─ Playback/       # 播放引擎、歌词来源、解析、匹配与缓存
 │  ├─ ViewModels/     # MVVM 状态与命令
 │  ├─ Windows/        # 悬浮层、控制条、设置和自定义渲染
@@ -168,13 +175,18 @@ FloatSpotifyNext/
 
 新增播放源时，实现 `IPlaybackEngine`，扩展 `PlaybackSource`，再接入 `PlaybackCoordinator`。新增歌词源时，实现 `ILyricsProvider` 并接入 `LyricsCoordinator`。
 
+界面文案集中在 `src/FloatSpotify/Localization/Strings.cs` 的 `key -> (中文, English)` 表里。
+XAML 用 `{loc:Tr Key}`，代码里用 `Loc.T("Key")`，都会跟随用户在设置里选的语言，无需重启。
+
 ### 运行回归测试
 
 ```powershell
 dotnet run --project tests/FloatSpotify.Lyrics.Tests -c Release -- artifacts/lyrics-word-sync
 ```
 
-测试套件包含模拟 HTTP、歌词解析、缓存、设置迁移、播放时间轴和 WPF 像素验证。生成的渲染证据使用自建测试歌词，不代表真实歌曲命中率或播放器端到端验收结果。
+测试套件包含模拟 HTTP、歌词解析、缓存、设置迁移、播放时间轴和 WPF 像素验证。
+加 `--i18n-probe` 可以真的把三个窗口建出来，验证界面确实会跟着语言切换。
+生成的渲染证据使用自建测试歌词，不代表真实歌曲命中率或播放器端到端验收结果。
 
 ### 提交规范
 
