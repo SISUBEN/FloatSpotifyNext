@@ -1,0 +1,83 @@
+<Window x:Class="FloatSpotify.Windows.SpotifySetupWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="配置 Spotify Client ID"
+        Width="500"
+        SizeToContent="Height"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        ShowInTaskbar="False"
+        Background="#FF16191E"
+        Foreground="White">
+    <Window.Resources>
+        <Style TargetType="Button">
+            <Setter Property="Height" Value="34" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="Background" Value="#FF272C33" />
+            <Setter Property="BorderBrush" Value="#50656F78" />
+            <Setter Property="Foreground" Value="White" />
+            <Setter Property="Cursor" Value="Hand" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="24">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Grid.Row="0"
+                   FontSize="20"
+                   FontWeight="SemiBold"
+                   Text="配置 Spotify Client ID" />
+
+        <StackPanel Grid.Row="1" Margin="0,16,0,0">
+            <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" Text="1. 打开 Spotify Developer Dashboard，登录后创建 App；如果页面询问 API，请选择 Web API。" />
+            <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" Text="2. 打开 App Settings，在 Redirect URIs 中加入下面的地址并保存。" />
+            <TextBlock Margin="0,0,0,8" TextWrapping="Wrap" Text="3. 回到 App 页面复制 Client ID。不要复制 Client Secret。" />
+            <TextBlock TextWrapping="Wrap" Text="4. 把 32 位 Client ID 粘贴到 FloatSpotify 设置，然后点击授权按钮。" />
+        </StackPanel>
+
+        <Grid Grid.Row="2" Margin="0,16,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*" />
+                <ColumnDefinition Width="Auto" />
+            </Grid.ColumnDefinitions>
+            <TextBox Height="34"
+                     Padding="9,5"
+                     VerticalContentAlignment="Center"
+                     IsReadOnly="True"
+                     Background="#FF20242A"
+                     BorderBrush="#50656F78"
+                     Foreground="#FFE7EAED"
+                     FontFamily="Consolas"
+                     Text="http://127.0.0.1:8888/callback" />
+            <Button x:Name="CopyCallbackButton"
+                    Grid.Column="1"
+                    Margin="8,0,0,0"
+                    Content="复制回调地址"
+                    Click="CopyCallbackButton_Click" />
+        </Grid>
+
+        <TextBlock Grid.Row="3"
+                   Margin="0,14,0,0"
+                   Foreground="#B8FFFFFF"
+                   TextWrapping="Wrap"
+                   Text="Client ID 会保存在当前 Windows 用户的环境变量中；应用更新不会删除现有 Spotify 会话。" />
+
+        <Border Grid.Row="4" Height="1" Margin="0,18,0,14" Background="#28FFFFFF" />
+
+        <StackPanel Grid.Row="5" HorizontalAlignment="Right" Orientation="Horizontal">
+            <Button Margin="0,0,8,0"
+                    Background="#FF1DB954"
+                    BorderBrush="#FF1DB954"
+                    Content="打开 Spotify Dashboard"
+                    Click="OpenDashboardButton_Click" />
+            <Button Content="关闭" Click="CloseButton_Click" />
+        </StackPanel>
+    </Grid>
+</Window>

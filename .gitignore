@@ -1,0 +1,35 @@
+# ---------- 构建产物 ----------
+bin/
+obj/
+.vs/
+*.user
+*.suo
+*.userprefs
+
+# ---------- 发布 / 打包产物 ----------
+artifacts/
+publish/
+deploy/
+installer/Output/
+*.zip
+
+# ---------- 旧版 v1 遗留（已从仓库移除，仅保留本地文件夹）----------
+packages/
+
+# ---------- 运行期数据（含凭据，绝不提交）----------
+lyrics_cache/
+spotify_session.json
+spotify-session.json
+
+# ---------- 助手本地状态 ----------
+.workbuddy-ai/
+
+# ---------- 与本项目无关的本地杂物（不发布）----------
+# snake_game 是个无关的 C++ 控制台小游戏，别混进歌词组件仓库。
+snake_game/
+# KRC 解密算法的一次性逆向探测脚本，留作本地参考，不进公开仓库。
+tools/kugou-probe*.py
+
+# ---------- 系统垃圾 ----------
+Thumbs.db
+desktop.ini

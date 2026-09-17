@@ -1,0 +1,119 @@
+<Window x:Class="FloatSpotify.Windows.LyricsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:vm="clr-namespace:FloatSpotify.ViewModels"
+        xmlns:local="clr-namespace:FloatSpotify.Windows"
+        Title="FloatSpotify Lyrics"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        SizeToContent="WidthAndHeight"
+        MaxWidth="{x:Static vm:OverlayViewModel.MaximumOverlayWidth}"
+        ShowInTaskbar="False"
+        ShowActivated="False"
+        Topmost="{Binding AlwaysOnTop}">
+    <!--
+        宽度刻意不写在 Window.Width 上。
+        Window.Width 和 SizeToContent 同时存在时，窗口尺寸走的是 WPF 自己那条计算路径，
+        出现过「窗口比歌词宽出一大截、滑条怎么调都不动」的情况
+        （settings.json 里 OverlayWidth 已经是 160，窗口宽度却没跟着变）。
+        改成 SizeToContent="WidthAndHeight" + 由 LyricSurface 的 Width 撑开：
+        窗口宽度只能等于内容宽度，两者不可能对不上。
+    -->
+    <Grid>
+        <Border x:Name="LyricSurface"
+                Width="{Binding OverlayWidth}"
+                MinHeight="48"
+                HorizontalAlignment="Center"
+                Padding="17,9,17,9"
+                CornerRadius="6"
+                Cursor="SizeAll"
+                PreviewMouseLeftButtonDown="LyricSurface_MouseLeftButtonDown"
+                PreviewMouseMove="LyricSurface_MouseMove"
+                PreviewMouseLeftButtonUp="LyricSurface_MouseLeftButtonUp"
+                LostMouseCapture="LyricSurface_LostMouseCapture">
+            <Border.Style>
+                <Style TargetType="Border">
+                    <!--
+                        Background 不能是 {x:Null}：null 的画刷不参与命中测试，整个歌词就没法拖了。
+                        #01000000（alpha=1）既看不见、又能命中。
+                        BorderThickness 常驻 1，只切画刷颜色 —— 否则显示边框时会多出 2px，
+                        窗口尺寸会跳一下。
+                    -->
+                    <Setter Property="Background" Value="#01000000" />
+                    <Setter Property="BorderThickness" Value="1" />
+                    <Setter Property="BorderBrush" Value="#00000000" />
+                    <Style.Triggers>
+                        <!--
+                            打开设置面板时让悬浮窗显形。透明窗口平时看不出边界，
+                            用户没法判断「歌词宽度」滑条到底有没有生效；显形之后
+                            窗口实际多大一目了然。关掉设置面板立刻恢复全透明。
+                        -->
+                        <DataTrigger Binding="{Binding IsSettingsOpen}" Value="True">
+                            <Setter Property="Background" Value="#26000000" />
+                            <Setter Property="BorderBrush" Value="#40FFFFFF" />
+                        </DataTrigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Style>
+            <StackPanel Opacity="{Binding OverlayOpacity}">
+                <ScrollViewer x:Name="LyricScroller" HorizontalScrollBarVisibility="Disabled">
+                    <ScrollViewer.Style>
+                        <Style TargetType="ScrollViewer">
+                            <Setter Property="Focusable" Value="False" />
+                            <Setter Property="IsHitTestVisible" Value="False" />
+                            <Setter Property="VerticalScrollBarVisibility" Value="Disabled" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding LyricFrame.ActiveLyric.IsPlainText}" Value="True">
+                                    <Setter Property="IsHitTestVisible" Value="True" />
+                                    <Setter Property="VerticalScrollBarVisibility" Value="Auto" />
+                                    <Setter Property="MaxHeight" Value="300" />
+                                    <Setter Property="ToolTip" Value="未同步歌词：滚动查看全文，不自动逐字高亮" />
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ScrollViewer.Style>
+                <local:KaraokeText Frame="{Binding LyricFrame}"
+                           Foreground="{Binding TextColor}"
+                           FontFamily="{Binding ResolvedFontFamily}"
+                           FontSize="{Binding FontSize}"
+                           FontWeight="SemiBold"
+                           TextOptions.TextFormattingMode="Display">
+                    <local:KaraokeText.Style>
+                        <Style TargetType="local:KaraokeText">
+                            <Setter Property="Effect" Value="{x:Null}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding GlowEnabled}" Value="True">
+                                    <Setter Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect Color="#E6000000"
+                                                              BlurRadius="10"
+                                                              ShadowDepth="1"
+                                                              Opacity="0.9" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </local:KaraokeText.Style>
+                </local:KaraokeText>
+                </ScrollViewer>
+
+                <TextBlock Text="{Binding NextLine}"
+                           Margin="0,3,0,0"
+                           Foreground="{Binding SecondaryTextColor}"
+                           FontFamily="{Binding ResolvedFontFamily}"
+                           FontSize="{Binding FontSize, ConverterCulture=en-US}"
+                           FontWeight="Normal"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           Visibility="{Binding ShowNextLine, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <TextBlock.LayoutTransform>
+                        <ScaleTransform ScaleX="0.72" ScaleY="0.72" />
+                    </TextBlock.LayoutTransform>
+                </TextBlock>
+            </StackPanel>
+        </Border>
+    </Grid>
+</Window>

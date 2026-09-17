@@ -1,0 +1,62 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <SupportedOSPlatformVersion>10.0.17763.0</SupportedOSPlatformVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <UseWPF>true</UseWPF>
+    <UseWindowsForms>true</UseWindowsForms>
+    <AssemblyName>FloatSpotify.Next</AssemblyName>
+    <RootNamespace>FloatSpotify</RootNamespace>
+  </PropertyGroup>
+
+  <!-- 版本与文件属性（同时用于安装包和 EXE 属性页） -->
+  <PropertyGroup>
+    <Version>1.0.0</Version>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <Product>FloatSpotify Next</Product>
+    <AssemblyTitle>FloatSpotify Next</AssemblyTitle>
+    <Description>Windows 桌面悬浮歌词组件，支持 Spotify 与 YouTube Music 播放源。</Description>
+    <Company>SISUBENY</Company>
+    <Copyright>Copyright (c) 2026 SISUBENY</Copyright>
+    <!-- 注意：仓库地址用的是 GitHub 用户名 SISUBEN，和上面的署名 SISUBENY 不是一个值 -->
+    <RepositoryUrl>https://github.com/SISUBEN/FloatSpotifyNext</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+  </PropertyGroup>
+
+  <!--
+    体积优化：只保留中性资源，丢掉 .NET 自带的 13 种本地化卫星程序集。
+    自包含发布时可省约 15.6 MB 与 221 个文件（181 MB → 165 MB）。
+    代价：框架级异常提示会回退为英文（应用自身 UI 文案是硬编码中文，不受影响）。
+    若想保留中文框架提示，改成 en;zh-Hans（多约 1 MB）。
+  -->
+  <PropertyGroup>
+    <SatelliteResourceLanguages>en</SatelliteResourceLanguages>
+  </PropertyGroup>
+
+  <!-- Release 不产出调试符号 -->
+  <PropertyGroup Condition="'$(Configuration)' == 'Release'">
+    <DebugType>none</DebugType>
+    <DebugSymbols>false</DebugSymbols>
+  </PropertyGroup>
+
+  <!-- 应用图标：放入 Assets/app.ico 后自动生效；没有该文件也能正常构建 -->
+  <PropertyGroup Condition="Exists('$(MSBuildProjectDirectory)\Assets\app.ico')">
+    <ApplicationIcon>Assets\app.ico</ApplicationIcon>
+  </PropertyGroup>
+
+  <!-- 同一个 .ico 再以 WPF 资源嵌入，供托盘图标按当前 DPI 取最合适的那一帧 -->
+  <ItemGroup Condition="Exists('$(MSBuildProjectDirectory)\Assets\app.ico')">
+    <Resource Include="Assets\app.ico" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <None Update="README-PORTABLE.txt"
+          CopyToOutputDirectory="PreserveNewest"
+          CopyToPublishDirectory="Always" />
+  </ItemGroup>
+
+</Project>

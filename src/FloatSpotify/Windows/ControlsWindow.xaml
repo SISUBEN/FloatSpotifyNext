@@ -1,0 +1,552 @@
+<Window x:Class="FloatSpotify.Windows.ControlsWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:storage="clr-namespace:FloatSpotify.Storage"
+        xmlns:vm="clr-namespace:FloatSpotify.ViewModels"
+        Title="FloatSpotify Controls"
+        WindowStyle="None"
+        AllowsTransparency="True"
+        Background="Transparent"
+        ResizeMode="NoResize"
+        SizeToContent="WidthAndHeight"
+        ShowInTaskbar="False"
+        Topmost="True">
+    <Window.Resources>
+        <Style x:Key="IconButton" TargetType="Button">
+            <Setter Property="Width" Value="38" />
+            <Setter Property="Height" Value="38" />
+            <Setter Property="Margin" Value="2" />
+            <Setter Property="Padding" Value="0" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="#FFF4F7F8" />
+            <Setter Property="BorderThickness" Value="0" />
+            <Setter Property="FontSize" Value="16" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Chrome"
+                                Background="{TemplateBinding Background}"
+                                CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#2CFFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsPressed" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#471DB954" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SwatchButton" TargetType="Button">
+            <Setter Property="Width" Value="28" />
+            <Setter Property="Height" Value="28" />
+            <Setter Property="Margin" Value="0,0,8,0" />
+            <Setter Property="BorderBrush" Value="#66FFFFFF" />
+            <Setter Property="BorderThickness" Value="1" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}"
+                                BorderBrush="{TemplateBinding BorderBrush}"
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                CornerRadius="4" />
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="SourceOption" TargetType="RadioButton">
+            <Setter Property="Height" Value="30" />
+            <Setter Property="Padding" Value="12,0" />
+            <Setter Property="Foreground" Value="#B8FFFFFF" />
+            <Setter Property="Cursor" Value="Hand" />
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="RadioButton">
+                        <Border x:Name="Chrome"
+                                Padding="{TemplateBinding Padding}"
+                                Background="Transparent"
+                                CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center"
+                                              VerticalAlignment="Center" />
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#1FFFFFFF" />
+                            </Trigger>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Chrome" Property="Background" Value="#38FFFFFF" />
+                                <Setter Property="Foreground" Value="White" />
+                                <Setter Property="FontWeight" Value="SemiBold" />
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+
+        <Style x:Key="DropDownOption" TargetType="ComboBoxItem">
+            <Setter Property="Foreground" Value="Black" />
+        </Style>
+    </Window.Resources>
+
+    <Border Background="#F21A1D22"
+            BorderBrush="#50656F78"
+            BorderThickness="1"
+            CornerRadius="8"
+            Padding="8">
+        <StackPanel>
+            <Grid Width="410">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <TextBlock Grid.Row="0"
+                           Margin="8,0,8,4"
+                           VerticalAlignment="Center"
+                           Foreground="#B8FFFFFF"
+                           FontSize="12"
+                           Text="{Binding StatusText}"
+                           TextTrimming="CharacterEllipsis"
+                           ToolTip="{Binding StatusText}" />
+
+                <StackPanel Grid.Row="1"
+                            HorizontalAlignment="Right"
+                            Orientation="Horizontal">
+                    <Button Style="{StaticResource IconButton}"
+                            Content="⏮"
+                            ToolTip="上一首"
+                            Click="PreviousButton_Click" />
+                    <Button Style="{StaticResource IconButton}"
+                            Content="{Binding PlayPauseGlyph}"
+                            ToolTip="播放或暂停"
+                            Click="PlayPauseButton_Click" />
+                    <Button Style="{StaticResource IconButton}"
+                            Content="⏭"
+                            ToolTip="下一首"
+                            Click="NextButton_Click" />
+                    <Button Style="{StaticResource IconButton}"
+                            Content="⚙"
+                            ToolTip="设置"
+                            Click="SettingsButton_Click" />
+                    <Button Style="{StaticResource IconButton}"
+                            Content="{Binding LockGlyph}"
+                            ToolTip="锁定或解锁歌词"
+                            Click="LockButton_Click" />
+                    <Button Style="{StaticResource IconButton}"
+                            Content="▁"
+                            ToolTip="隐藏歌词"
+                            Click="HideButton_Click" />
+                </StackPanel>
+            </Grid>
+
+            <ScrollViewer Margin="10,8,10,6"
+                          Width="410"
+                          MaxHeight="560"
+                          HorizontalScrollBarVisibility="Disabled"
+                          VerticalScrollBarVisibility="Auto"
+                          PanningMode="VerticalOnly"
+                          Visibility="{Binding IsSettingsOpen, Converter={StaticResource BooleanToVisibilityConverter}}">
+              <Grid Width="390">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <Border Grid.Row="0" Height="1" Margin="0,0,0,12" Background="#28FFFFFF" />
+
+                <Grid Grid.Row="1" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Center" Foreground="#DFFFFFFF" Text="播放源" />
+                    <Border Grid.Column="1"
+                            HorizontalAlignment="Left"
+                            Padding="2"
+                            Background="#18000000"
+                            BorderBrush="#32FFFFFF"
+                            BorderThickness="1"
+                            CornerRadius="6">
+                        <StackPanel Orientation="Horizontal">
+                            <RadioButton Style="{StaticResource SourceOption}"
+                                         GroupName="PlaybackSource"
+                                         Content="Spotify"
+                                         IsChecked="{Binding IsSpotifySource, Mode=TwoWay}" />
+                            <RadioButton Style="{StaticResource SourceOption}"
+                                         GroupName="PlaybackSource"
+                                         Content="YouTube Music"
+                                         IsChecked="{Binding IsYouTubeMusicSource, Mode=TwoWay}" />
+                        </StackPanel>
+                    </Border>
+                </Grid>
+
+                <Grid Grid.Row="2"
+                      Margin="0,0,0,10"
+                      Visibility="{Binding IsSpotifySource, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="34" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Center"
+                               Foreground="#DFFFFFFF"
+                               Text="Client ID" />
+                    <TextBox Grid.Column="1"
+                             Height="30"
+                             Padding="8,4"
+                             VerticalContentAlignment="Center"
+                             Background="#18000000"
+                             BorderBrush="#32FFFFFF"
+                             BorderThickness="1"
+                             Foreground="White"
+                             FontFamily="Consolas"
+                             FontSize="12"
+                             MaxLength="32"
+                             Text="{Binding SpotifyClientId, Mode=TwoWay, UpdateSourceTrigger=LostFocus}"
+                             ToolTip="保存到用户环境变量 FLOATSPOTIFY_SPOTIFY_CLIENT_ID" />
+                    <Button Grid.Column="2"
+                            Width="28"
+                            Height="28"
+                            Margin="6,0,0,0"
+                            Background="Transparent"
+                            BorderBrush="#32FFFFFF"
+                            Foreground="White"
+                            FontWeight="SemiBold"
+                            Content="?"
+                            ToolTip="如何获取 Spotify Client ID"
+                            Click="ClientIdHelpButton_Click" />
+                </Grid>
+
+                <Grid Grid.Row="3" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="42" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Center" Foreground="#DFFFFFFF" Text="字号" />
+                    <Slider Grid.Column="1"
+                            Minimum="22"
+                            Maximum="96"
+                            TickFrequency="2"
+                            Value="{Binding FontSize, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Grid.Column="2"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"
+                               Foreground="White"
+                               Text="{Binding FontSize, StringFormat={}{0:0}}" />
+                </Grid>
+
+                <Grid Grid.Row="4" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="52" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Center" Foreground="#DFFFFFFF" Text="歌词宽度" />
+                    <Slider Grid.Column="1"
+                            Minimum="{x:Static vm:OverlayViewModel.MinimumOverlayWidth}"
+                            Maximum="{x:Static vm:OverlayViewModel.MaximumOverlayWidth}"
+                            TickFrequency="20"
+                            Value="{Binding OverlayWidth, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Grid.Column="2"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"
+                               Foreground="White"
+                               Text="{Binding OverlayWidth, StringFormat={}{0:0}}" />
+                </Grid>
+
+                <Grid Grid.Row="5" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Center" Foreground="#DFFFFFFF" Text="屏幕位置" />
+                    <ComboBox Grid.Column="1"
+                              Height="30"
+                              Padding="8,2"
+                              Background="#FF24282E"
+                              Foreground="White"
+                              ItemContainerStyle="{StaticResource DropDownOption}"
+                              SelectedValuePath="Tag"
+                              SelectedValue="{Binding OverlayPlacement, Mode=TwoWay}">
+                        <ComboBoxItem Content="自由拖动" Tag="{x:Static storage:OverlayPlacement.Custom}" />
+                        <ComboBoxItem Content="顶部居中" Tag="{x:Static storage:OverlayPlacement.Top}" />
+                        <ComboBoxItem Content="屏幕中央" Tag="{x:Static storage:OverlayPlacement.Center}" />
+                        <ComboBoxItem Content="底部居中" Tag="{x:Static storage:OverlayPlacement.Bottom}" />
+                        <ComboBoxItem Content="左上角" Tag="{x:Static storage:OverlayPlacement.TopLeft}" />
+                        <ComboBoxItem Content="右上角" Tag="{x:Static storage:OverlayPlacement.TopRight}" />
+                        <ComboBoxItem Content="左下角" Tag="{x:Static storage:OverlayPlacement.BottomLeft}" />
+                        <ComboBoxItem Content="右下角" Tag="{x:Static storage:OverlayPlacement.BottomRight}" />
+                    </ComboBox>
+                </Grid>
+
+                <Grid Grid.Row="6" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Center" Foreground="#DFFFFFFF" Text="字体" />
+                    <ComboBox Grid.Column="1"
+                              Height="30"
+                              Padding="8,2"
+                              Background="#FF24282E"
+                              Foreground="White"
+                              ItemContainerStyle="{StaticResource DropDownOption}"
+                              SelectedValuePath="Tag"
+                              SelectedValue="{Binding FontFamilyName, Mode=TwoWay}">
+                        <ComboBoxItem Content="Segoe UI Variable" Tag="Segoe UI Variable Display" />
+                        <ComboBoxItem Content="微软雅黑" Tag="Microsoft YaHei UI" />
+                        <ComboBoxItem Content="游ゴシック" Tag="Yu Gothic UI" />
+                        <ComboBoxItem Content="맑은 고딕" Tag="Malgun Gothic" />
+                        <ComboBoxItem Content="等宽 Cascadia" Tag="Cascadia Mono" />
+                    </ComboBox>
+                </Grid>
+
+                <Grid Grid.Row="7" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="42" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Center" Foreground="#DFFFFFFF" Text="透明度" />
+                    <Slider Grid.Column="1"
+                            Minimum="0.35"
+                            Maximum="1"
+                            TickFrequency="0.05"
+                            Value="{Binding OverlayOpacity, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Grid.Column="2"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"
+                               Foreground="White"
+                               Text="{Binding OverlayOpacity, StringFormat={}{0:P0}}" />
+                </Grid>
+
+                <Grid Grid.Row="8" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Center" Foreground="#DFFFFFFF" Text="文字颜色" />
+                    <StackPanel Grid.Column="1" Orientation="Horizontal">
+                        <Button Style="{StaticResource SwatchButton}" Background="#FFFFFFFF" Tag="#FFFFFFFF" Click="ColorButton_Click" ToolTip="白色" />
+                        <Button Style="{StaticResource SwatchButton}" Background="#FF1DB954" Tag="#FF1DB954" Click="ColorButton_Click" ToolTip="Spotify 绿" />
+                        <Button Style="{StaticResource SwatchButton}" Background="#FF54D6E8" Tag="#FF54D6E8" Click="ColorButton_Click" ToolTip="青色" />
+                        <Button Style="{StaticResource SwatchButton}" Background="#FFFFD166" Tag="#FFFFD166" Click="ColorButton_Click" ToolTip="金色" />
+                        <Button Style="{StaticResource SwatchButton}" Background="#FFFF7A90" Tag="#FFFF7A90" Click="ColorButton_Click" ToolTip="玫红" />
+                    </StackPanel>
+                </Grid>
+
+                <Grid Grid.Row="9" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="34" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Top" Margin="0,4,0,0" Foreground="#DFFFFFFF" Text="RGB" />
+                    <StackPanel Grid.Column="1">
+                        <Grid Height="24">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="18" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="34" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Center" Foreground="#FFFF7A90" Text="R" />
+                            <Slider Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding TextRed, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="White" Text="{Binding TextRed, StringFormat={}{0:0}}" />
+                        </Grid>
+                        <Grid Height="24">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="18" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="34" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Center" Foreground="#FF59D987" Text="G" />
+                            <Slider Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding TextGreen, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="White" Text="{Binding TextGreen, StringFormat={}{0:0}}" />
+                        </Grid>
+                        <Grid Height="24">
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="18" />
+                                <ColumnDefinition Width="*" />
+                                <ColumnDefinition Width="34" />
+                            </Grid.ColumnDefinitions>
+                            <TextBlock VerticalAlignment="Center" Foreground="#FF54D6E8" Text="B" />
+                            <Slider Grid.Column="1" Minimum="0" Maximum="255" Value="{Binding TextBlue, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                            <TextBlock Grid.Column="2" HorizontalAlignment="Right" VerticalAlignment="Center" Foreground="White" Text="{Binding TextBlue, StringFormat={}{0:0}}" />
+                        </Grid>
+                    </StackPanel>
+                    <Border Grid.Column="2"
+                            Width="26"
+                            Height="58"
+                            HorizontalAlignment="Right"
+                            VerticalAlignment="Center"
+                            Background="{Binding TextColor}"
+                            BorderBrush="#66FFFFFF"
+                            BorderThickness="1"
+                            CornerRadius="4" />
+                </Grid>
+
+                <Grid Grid.Row="10" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="52" />
+                        <ColumnDefinition Width="34" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Center" Foreground="#DFFFFFFF" Text="歌词偏移" />
+                    <Slider Grid.Column="1"
+                            Minimum="-5"
+                            Maximum="5"
+                            TickFrequency="0.1"
+                            IsSnapToTickEnabled="True"
+                            Value="{Binding LyricOffsetSeconds, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" />
+                    <TextBlock Grid.Column="2"
+                               HorizontalAlignment="Right"
+                               VerticalAlignment="Center"
+                               Foreground="White"
+                               Text="{Binding LyricOffsetSeconds, StringFormat={}{0:+0.0;-0.0;0.0}s}" />
+                    <Button Grid.Column="3"
+                            Width="28"
+                            Height="28"
+                            Margin="6,0,0,0"
+                            Background="Transparent"
+                            BorderBrush="#32FFFFFF"
+                            Foreground="White"
+                            Content="↺"
+                            ToolTip="重置当前歌曲的歌词偏移"
+                            Click="ResetLyricOffsetButton_Click" />
+                </Grid>
+
+                <Grid Grid.Row="11" Margin="0,0,0,10">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="90" />
+                        <ColumnDefinition Width="*" />
+                    </Grid.ColumnDefinitions>
+                    <TextBlock VerticalAlignment="Top" Margin="0,4,0,0" Foreground="#DFFFFFFF" Text="歌词源" />
+                    <StackPanel Grid.Column="1">
+                        <ItemsControl ItemsSource="{Binding LyricsSources}">
+                            <ItemsControl.ItemTemplate>
+                                <DataTemplate>
+                                    <Grid Margin="0,0,0,4">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="Auto" />
+                                        </Grid.ColumnDefinitions>
+                                        <CheckBox VerticalAlignment="Center"
+                                                  Foreground="#E6FFFFFF"
+                                                  Content="{Binding DisplayName}"
+                                                  IsChecked="{Binding Enabled, Mode=TwoWay}"
+                                                  ToolTip="{Binding Description}" />
+                                        <StackPanel Grid.Column="1" Orientation="Horizontal">
+                                            <TextBlock VerticalAlignment="Center"
+                                                       Margin="0,0,6,0"
+                                                       FontSize="11"
+                                                       Text="{Binding Note}">
+                                                <TextBlock.Style>
+                                                    <Style TargetType="TextBlock">
+                                                        <!-- Foreground 只在这里设，不能写成局部属性，
+                                                             否则局部值会盖掉下面的触发器 -->
+                                                        <Setter Property="Foreground" Value="#59FFFFFF" />
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding IsUnofficial}" Value="True">
+                                                                <Setter Property="Foreground" Value="#FFE0A85C" />
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </TextBlock.Style>
+                                            </TextBlock>
+                                            <Button Width="24"
+                                                    Height="24"
+                                                    Margin="0,0,4,0"
+                                                    Padding="0"
+                                                    Background="Transparent"
+                                                    BorderBrush="#32FFFFFF"
+                                                    BorderThickness="1"
+                                                    Foreground="White"
+                                                    FontSize="11"
+                                                    Cursor="Hand"
+                                                    Content="▲"
+                                                    ToolTip="提高优先级"
+                                                    IsEnabled="{Binding CanMoveUp}"
+                                                    Click="MoveLyricsSourceUp_Click" />
+                                            <Button Width="24"
+                                                    Height="24"
+                                                    Padding="0"
+                                                    Background="Transparent"
+                                                    BorderBrush="#32FFFFFF"
+                                                    BorderThickness="1"
+                                                    Foreground="White"
+                                                    FontSize="11"
+                                                    Cursor="Hand"
+                                                    Content="▼"
+                                                    ToolTip="降低优先级"
+                                                    IsEnabled="{Binding CanMoveDown}"
+                                                    Click="MoveLyricsSourceDown_Click" />
+                                        </StackPanel>
+                                    </Grid>
+                                </DataTemplate>
+                            </ItemsControl.ItemTemplate>
+                        </ItemsControl>
+                        <TextBlock Margin="0,2,0,0"
+                                   FontSize="11"
+                                   Foreground="#59FFFFFF"
+                                   TextWrapping="Wrap"
+                                   Text="先查基础源，有歌词立即显示；再尝试逐字增强，失败不清空歌词。同类源按列表顺序查询；全部关闭则不取词。" />
+                    </StackPanel>
+                </Grid>
+
+                <WrapPanel Grid.Row="12">
+                    <CheckBox Margin="0,0,18,4"
+                              Foreground="#E6FFFFFF"
+                              Content="下一句"
+                              IsChecked="{Binding ShowNextLine, Mode=TwoWay}" />
+                    <CheckBox Margin="0,0,18,4"
+                              Foreground="#E6FFFFFF"
+                              Content="描边阴影"
+                              IsChecked="{Binding GlowEnabled, Mode=TwoWay}" />
+                    <CheckBox Margin="0,0,0,4"
+                              Foreground="#E6FFFFFF"
+                              Content="始终置顶"
+                              IsChecked="{Binding AlwaysOnTop, Mode=TwoWay}" />
+                </WrapPanel>
+
+                <Button Grid.Row="13"
+                        Margin="0,8,0,0"
+                        Height="34"
+                        HorizontalAlignment="Left"
+                        Padding="14,0"
+                        Background="#241DB954"
+                        BorderBrush="#661DB954"
+                        Foreground="White"
+                        Cursor="Hand"
+                        Content="使用此 Client ID 授权 Spotify"
+                        Visibility="{Binding IsSpotifySource, Converter={StaticResource BooleanToVisibilityConverter}}"
+                        ToolTip="使用上方 Client ID 在浏览器中登录 Spotify"
+                        Click="ReauthorizeButton_Click" />
+              </Grid>
+            </ScrollViewer>
+        </StackPanel>
+    </Border>
+</Window>
