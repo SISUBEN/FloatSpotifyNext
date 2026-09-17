@@ -1,9 +1,11 @@
 using System.Diagnostics;
+using System.Globalization;
 using System.Net;
 using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Text.Json;
+using FloatSpotify.Localization;
 
 namespace FloatSpotify.Playback;
 
@@ -34,7 +36,7 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
     private DateTimeOffset _nextPollAt = DateTimeOffset.MinValue;
     private DateTimeOffset _rateLimitUntil = DateTimeOffset.MinValue;
     private string? _rateLimitClientId;
-    private string? _authError;
+    private string? _authErrorKey;
     private bool _reauthorizationInProgress;
     private string? _statusMessage;
     private DateTimeOffset _statusMessageUntil;
@@ -94,7 +96,7 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
         {
             lock (_stateGate)
             {
-                _authError = null;
+                _authErrorKey = null;
                 _reauthorizationInProgress = true;
                 _accessTokenTask = _authClient.ForceAuthorizationAsync(cancellationToken);
             }
@@ -127,7 +129,7 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
             if (response.StatusCode == HttpStatusCode.Unauthorized)
             {
                 _authClient.InvalidateAccessToken(token);
-                SetStatusMessage("Spotify 授权已过期，正在刷新…", TimeSpan.FromSeconds(5));
+                SetStatusMessage(Loc.T("Spotify_Status_TokenExpired"), TimeSpan.FromSeconds(5));
                 lock (_stateGate)
                 {
                     _accessToken = null;
@@ -138,7 +140,7 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
 
             if (response.StatusCode == HttpStatusCode.Forbidden)
             {
-                SetStatusMessage("播放控制需要 Spotify Premium 和重新授权权限", TimeSpan.FromSeconds(8));
+                SetStatusMessage(Loc.T("Spotify_Status_PremiumRequired"), TimeSpan.FromSeconds(8));
                 return;
             }
 
@@ -150,7 +152,9 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
 
             if (!response.IsSuccessStatusCode)
             {
-                SetStatusMessage($"Spotify 控制失败 ({(int)response.StatusCode})", TimeSpan.FromSeconds(6));
+                SetStatusMessage(
+                    Loc.F("Spotify_Status_ControlFailed", (int)response.StatusCode),
+                    TimeSpan.FromSeconds(6));
                 return;
             }
 
@@ -163,7 +167,7 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
         }
         catch (HttpRequestException)
         {
-            SetStatusMessage("无法连接 Spotify，稍后会自动重试", TimeSpan.FromSeconds(6));
+            SetStatusMessage(Loc.T("Spotify_Status_Offline"), TimeSpan.FromSeconds(6));
         }
         finally
         {
@@ -204,7 +208,7 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
             lock (_stateGate)
             {
                 _accessToken = token;
-                _authError = null;
+                _authErrorKey = null;
                 _reauthorizationInProgress = false;
             }
         }
@@ -217,11 +221,11 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
                 _reauthorizationInProgress = false;
                 _accessTokenTask = null;
                 if (!wasReauthorization)
-                    _authError = exception.Message;
+                    _authErrorKey = exception.Key;
             }
 
             if (wasReauthorization)
-                SetStatusMessage(exception.Message, TimeSpan.FromSeconds(10));
+                SetStatusMessage(Loc.T(exception.Key), TimeSpan.FromSeconds(10));
         }
         catch (HttpRequestException)
         {
@@ -232,13 +236,13 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
                 _reauthorizationInProgress = false;
                 _accessTokenTask = null;
                 if (!wasReauthorization)
-                    _authError = "无法连接 Spotify 授权服务，请检查网络后重新授权。";
+                    _authErrorKey = "Spotify_Auth_NetworkError";
             }
 
             if (wasReauthorization)
             {
                 SetStatusMessage(
-                    "重新授权失败，现有 Spotify 会话仍然可用",
+                    Loc.T("Spotify_Auth_ReauthorizeFailed"),
                     TimeSpan.FromSeconds(10));
             }
         }
@@ -288,7 +292,9 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
 
             if (!response.IsSuccessStatusCode)
             {
-                SetStatusMessage($"Spotify 状态读取失败 ({(int)response.StatusCode})", TimeSpan.FromSeconds(4));
+                SetStatusMessage(
+                    Loc.F("Spotify_Status_StateFailed", (int)response.StatusCode),
+                    TimeSpan.FromSeconds(4));
                 return;
             }
 
@@ -366,7 +372,7 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
         }
         catch (HttpRequestException)
         {
-            SetStatusMessage("Spotify 网络暂时不可用，正在重试", TimeSpan.FromSeconds(4));
+            SetStatusMessage(Loc.T("Spotify_Status_NetworkRetry"), TimeSpan.FromSeconds(4));
         }
         catch (SpotifyAuthorizationException exception)
         {
@@ -374,12 +380,12 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
             {
                 _accessToken = null;
                 _accessTokenTask = null;
-                _authError = exception.Message;
+                _authErrorKey = exception.Key;
             }
         }
         catch (JsonException)
         {
-            SetStatusMessage("Spotify 返回了无法识别的播放状态", TimeSpan.FromSeconds(4));
+            SetStatusMessage(Loc.T("Spotify_Status_UnknownState"), TimeSpan.FromSeconds(4));
         }
         finally
         {
@@ -423,13 +429,13 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
                     ? _statusMessage
                     : null;
 
-            if (_authError is not null)
+            if (_authErrorKey is not null)
             {
                 return new PlaybackFrame(
                     "Spotify",
-                    "需要授权",
-                    _authError,
-                    "点击歌词打开设置后可重新授权",
+                    Loc.T("Spotify_NeedsAuth"),
+                    Loc.T(_authErrorKey),
+                    Loc.T("Spotify_ReauthorizeHint"),
                     false,
                     TimeSpan.Zero,
                     TimeSpan.Zero,
@@ -440,9 +446,9 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
             {
                 return new PlaybackFrame(
                     "Spotify",
-                    "正在连接",
-                    "正在连接 Spotify…",
-                    "首次运行会在浏览器中请求授权",
+                    Loc.T("Spotify_Connecting"),
+                    Loc.T("Spotify_ConnectingDetail"),
+                    Loc.T("Spotify_FirstRunHint"),
                     false,
                     TimeSpan.Zero,
                     TimeSpan.Zero,
@@ -453,9 +459,9 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
             {
                 return new PlaybackFrame(
                     "Spotify",
-                    "未播放",
-                    "Spotify 当前没有播放内容",
-                    "请在任一设备开始播放",
+                    Loc.T("Spotify_Idle"),
+                    Loc.T("Spotify_IdleDetail"),
+                    Loc.T("Spotify_IdleHint"),
                     false,
                     TimeSpan.Zero,
                     TimeSpan.Zero,
@@ -477,17 +483,17 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
             if (_lyricsTask is not null && _lyrics.Count == 0)
             {
                 currentLine = $"{_snapshot.Artist} · {_snapshot.Track}";
-                nextLine = "正在匹配同步歌词…";
+                nextLine = Loc.T("Lyrics_Matching");
             }
             else if (_lyrics.Count == 0)
             {
                 currentLine = $"{_snapshot.Artist} · {_snapshot.Track}";
-                nextLine = "暂未找到歌词，将自动重试";
+                nextLine = Loc.T("Lyrics_NotFound_Retrying");
             }
             else
             {
                 currentLine = currentIndex >= 0 ? _lyrics[currentIndex].Text : "♪";
-                nextLine = currentIndex >= 0 && _lyrics[currentIndex].IsPlainText ? "未同步歌词 · 滚动查看全文" :
+                nextLine = currentIndex >= 0 && _lyrics[currentIndex].IsPlainText ? Loc.T("Overlay_UnsyncedScroll") :
                     currentIndex + 1 < _lyrics.Count
                     ? _lyrics[currentIndex + 1].Text
                     : string.Empty;
@@ -618,7 +624,7 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
         {
             _accessToken = token;
             _accessTokenTask = Task.FromResult(token);
-            _authError = null;
+            _authErrorKey = null;
         }
 
         return token;
@@ -644,8 +650,8 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
         var remaining = retryAt - now;
         var localRetryAt = retryAt.ToLocalTime();
         var retryTime = localRetryAt.Date == now.ToLocalTime().Date
-            ? localRetryAt.ToString("HH:mm")
-            : localRetryAt.ToString("M月d日 HH:mm");
+            ? localRetryAt.ToString("HH:mm", CultureInfo.InvariantCulture)
+            : localRetryAt.ToString(Loc.T("Spotify_Retry_DateFormat"), CultureInfo.InvariantCulture);
 
         if (remaining >= TimeSpan.FromHours(1))
         {
@@ -653,18 +659,18 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
             var hours = totalMinutes / 60;
             var minutes = totalMinutes % 60;
             return minutes == 0
-                ? $"Spotify 将于 {retryTime} 自动重试（约 {hours} 小时）"
-                : $"Spotify 将于 {retryTime} 自动重试（约 {hours} 小时 {minutes} 分钟）";
+                ? Loc.F("Spotify_Retry_Hours", retryTime, hours)
+                : Loc.F("Spotify_Retry_HoursMinutes", retryTime, hours, minutes);
         }
 
         if (remaining >= TimeSpan.FromMinutes(1))
         {
             var minutes = (int)Math.Ceiling(remaining.TotalMinutes);
-            return $"Spotify 将于 {retryTime} 自动重试（约 {minutes} 分钟）";
+            return Loc.F("Spotify_Retry_Minutes", retryTime, minutes);
         }
 
         var seconds = Math.Max(1, (int)Math.Ceiling(remaining.TotalSeconds));
-        return $"Spotify 将于 {retryTime} 自动重试（{seconds} 秒）";
+        return Loc.F("Spotify_Retry_Seconds", retryTime, seconds);
     }
 
     private void SetStatusMessage(string message, TimeSpan duration)

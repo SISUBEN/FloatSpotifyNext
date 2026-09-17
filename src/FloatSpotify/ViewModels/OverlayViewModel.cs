@@ -2,6 +2,7 @@ using System.Collections.ObjectModel;
 using System.Globalization;
 using System.IO;
 using System.Windows;
+using FloatSpotify.Localization;
 using FloatSpotify.Playback;
 using FloatSpotify.Storage;
 
@@ -19,14 +20,14 @@ public sealed class OverlayViewModel : ObservableObject
 
     private string _track = "FloatSpotify";
     private string _artist = "Rewrite preview";
-    private string _currentLine = "Starting lyric preview...";
+    private string _currentLine = Loc.T("Overlay_Connecting");
     private string _nextLine = string.Empty;
     private string? _statusMessage;
     private bool _isPlaying = true;
     private bool _isSettingsOpen;
     private string? _currentLyricKey;
     public PlaybackFrame? LyricFrame { get; private set; } = new(
-        "FloatSpotify", "", "正在连接播放状态…", "", false, TimeSpan.Zero, TimeSpan.Zero);
+        "FloatSpotify", "", Loc.T("Overlay_Connecting"), "", false, TimeSpan.Zero, TimeSpan.Zero);
 
     public OverlayViewModel(
         PlaybackCoordinator playbackEngine,
@@ -43,6 +44,13 @@ public sealed class OverlayViewModel : ObservableObject
             _settings.LyricsSources.Select(
                 option => new LyricsSourceItem(option.Source, option.Enabled, OnLyricsSourceToggled)));
         RefreshLyricsSourceMoveState();
+
+        LanguageOptions =
+        [
+            new LanguageOption(LanguageChoice.System),
+            new LanguageOption(LanguageChoice.ChineseSimplified),
+            new LanguageOption(LanguageChoice.English)
+        ];
 
         // 启动时就把设置同步给协调器，别等用户去动它。
         ApplyLyricsSourceConfiguration();
@@ -147,6 +155,25 @@ public sealed class OverlayViewModel : ObservableObject
         {
             if (value)
                 SelectPlaybackSource(PlaybackSource.YouTubeMusic);
+        }
+    }
+
+    /// <summary>
+    /// 界面语言。选「跟随系统」时设置里存 null，所以 getter 必须按
+    /// <see cref="Loc.ToChoice"/> 反查，不能直接读设置。
+    /// </summary>
+    public LanguageChoice LanguageChoice
+    {
+        get => Loc.ToChoice(_settings.Language);
+        set
+        {
+            if (Loc.ToChoice(_settings.Language) == value)
+                return;
+
+            _settings.Language = Loc.ToStored(value);
+            Loc.Language = Loc.Resolve(value);
+            OnPropertyChanged();
+            PersistSettings();
         }
     }
 
@@ -476,7 +503,7 @@ public sealed class OverlayViewModel : ObservableObject
         // Never allow an empty provider/status frame to remove the visible drag target.
         if (string.IsNullOrWhiteSpace(frame.CurrentLine))
             frame = frame with { CurrentLine = frame.ActiveLyric is not null ? "♪" :
-                string.IsNullOrWhiteSpace(frame.Track) ? "暂无歌词 · 点击打开控制条" : $"{frame.Artist} · {frame.Track}",
+                string.IsNullOrWhiteSpace(frame.Track) ? Loc.T("Overlay_NoLyrics_Hint") : $"{frame.Artist} · {frame.Track}",
                 ActiveLyric = null };
         if (frame.Duration > TimeSpan.Zero)
         {
@@ -509,6 +536,9 @@ public sealed class OverlayViewModel : ObservableObject
     /// 设置面板里的歌词源列表。**列表顺序即优先级**，越靠前越先用。
     /// </summary>
     public ObservableCollection<LyricsSourceItem> LyricsSources { get; }
+
+    /// <summary>「语言」下拉框的固定三项：跟随系统 / 简体中文 / English。</summary>
+    public IReadOnlyList<LanguageOption> LanguageOptions { get; }
 
     /// <summary>
     /// 上移 / 下移一个歌词源，<paramref name="delta"/> 为 -1 表示上移（优先级更高）。

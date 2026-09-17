@@ -1,4 +1,13 @@
-FloatSpotify Next - Windows x64 便携版
+FloatSpotify Next - Windows x64 便携版 / Windows x64 portable
+================================================================
+
+界面语言可在设置里切换（跟随系统 / 简体中文 / English）。
+The interface language can be switched in the settings (System default / 简体中文 / English).
+
+
+--------------------------------------------------------------
+【中文】
+--------------------------------------------------------------
 
 系统要求：Windows 10 1809 (build 17763) 或更高，x64。
 
@@ -31,7 +40,7 @@ FloatSpotify Next - Windows x64 便携版
   请暂停其他标签页，确保应用选择到正在播放的音乐。
 
 Spotify 注意事项：
-- 初次使用需获取ClientID（只有Premium才有），获取步骤：
+- 初次使用需获取 Client ID（只有 Premium 才有），获取步骤：
   1. 打开 https://developer.spotify.com/dashboard 并登录。
   2. 创建一个 App；如果页面询问使用的 API，请选择 Web API。
   3. 打开 App Settings，在 Redirect URIs 中加入并保存：
@@ -48,3 +57,64 @@ Spotify 注意事项：
 
 覆盖更新应用不会删除 Spotify 会话。歌词偏移会按歌曲分别记忆；如果个别歌词仍有偏差，
 调整“歌词偏移”只会影响当前歌曲，旁边的重置按钮可恢复为 0 秒。
+
+
+--------------------------------------------------------------
+【English】
+--------------------------------------------------------------
+
+Requirements: Windows 10 1809 (build 17763) or later, x64.
+
+Getting started:
+1. Extract the whole ZIP first — running the EXE straight from the archive will not work.
+2. Run FloatSpotify.Next.exe.
+3. Click the floating lyrics to open the settings and pick Spotify or YouTube Music.
+4. With Spotify, enter your own Spotify Client ID and click the authorize button.
+
+No installation and no registry entries; deleting the folder uninstalls it.
+
+You can tell which .NET flavour you have by looking at the files in the package:
+- Only FloatSpotify.Next.exe and this readme -> self-contained portable build with .NET 8
+  bundled; nothing else to install.
+- A pile of .dll files next to the EXE -> framework-dependent build; install the
+  .NET 8 Desktop Runtime first (https://dotnet.microsoft.com/download/dotnet/8.0),
+  otherwise double-clicking does nothing.
+
+If you would rather use an installer (Start menu shortcut, uninstall entry, runtime
+installed for you), download setup-online or setup-offline from the Releases page
+(file names look like FloatSpotifyNext-x86_64-v1.0.0-setup-online.exe).
+
+While the lyrics are unlocked, adjust their width with the "Lyric width" slider in the
+settings (160-1600 px). The settings also cover font size, font family, RGB colour and
+presets for the top, centre, bottom and four corners; choose "Free drag" to place them
+by hand. Clicking "lock" makes the window click-through so it never blocks anything;
+unlock it again from the tray icon.
+
+Playback sources:
+- Spotify: the first run opens your browser, so finish the Spotify authorization there.
+- YouTube Music: play music in Chrome, Edge, Firefox, Brave, Opera, Vivaldi or an
+  installed YouTube Music PWA. No Google authorization is needed.
+- The YouTube Music mode reads the Windows media session. If your browser plays several
+  media tabs at once, pause the others so the app picks the music you are listening to.
+
+Spotify notes:
+- On first use you need your own Client ID (Premium only). Steps:
+  1. Open https://developer.spotify.com/dashboard and sign in.
+  2. Create an app; if it asks which API you need, choose Web API.
+  3. Open the app settings, add the address below to Redirect URIs and save:
+     http://127.0.0.1:8888/callback
+  4. Copy the 32-character Client ID shown on the app page. Do not copy the Client Secret.
+  5. Paste the Client ID into the FloatSpotify settings and click
+     "Authorize Spotify with this Client ID".
+- The "?" button next to the Client ID field opens the in-app guide at any time.
+- The Client ID is stored in the user environment variable FLOATSPOTIFY_SPOTIFY_CLIENT_ID.
+- The redirect URI must be configured in the Spotify Dashboard:
+  http://127.0.0.1:8888/callback
+- Using your own Spotify app avoids the publisher account's allow-list limits.
+
+Settings, the lyrics cache and the Spotify session live in:
+%LocalAppData%\FloatSpotify.Next
+
+Updating the app in place will not delete your Spotify session. Lyric offsets are
+remembered per song; if an individual song is still off, adjusting "Lyric offset"
+affects only the current song, and the reset button next to it restores 0 seconds.

@@ -1,6 +1,7 @@
 using System.ComponentModel;
 using System.Diagnostics;
 using System.Windows;
+using FloatSpotify.Localization;
 
 namespace FloatSpotify.Windows;
 
@@ -9,23 +10,34 @@ public partial class SpotifySetupWindow : Window
     private const string CallbackUri = "http://127.0.0.1:8888/callback";
     private const string DashboardUri = "https://developer.spotify.com/dashboard";
 
+    private bool _callbackCopied;
+
     public SpotifySetupWindow()
     {
         InitializeComponent();
+
+        // 复制成功后按钮要变成「已复制」，但那个文案也得跟着语言走 ——
+        // 直接赋值 Content 会把 {loc:Tr} 的绑定覆盖掉，所以改成语言变化时重算。
+        Loc.LanguageChanged += RefreshCopyButton;
+        Closed += (_, _) => Loc.LanguageChanged -= RefreshCopyButton;
     }
+
+    private void RefreshCopyButton() =>
+        CopyCallbackButton.Content = Loc.T(_callbackCopied ? "Setup_Copied" : "Setup_CopyCallback");
 
     private void CopyCallbackButton_Click(object sender, RoutedEventArgs e)
     {
         try
         {
             System.Windows.Clipboard.SetText(CallbackUri);
-            CopyCallbackButton.Content = "已复制";
+            _callbackCopied = true;
+            RefreshCopyButton();
         }
         catch (System.Runtime.InteropServices.ExternalException)
         {
             System.Windows.MessageBox.Show(
-                "无法访问剪贴板，请手动复制回调地址。",
-                "FloatSpotify",
+                Loc.T("Setup_ClipboardError"),
+                Loc.T("App_Title"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }
@@ -41,7 +53,7 @@ public partial class SpotifySetupWindow : Window
         {
             System.Windows.MessageBox.Show(
                 DashboardUri,
-                "无法打开浏览器",
+                Loc.T("Setup_BrowserError_Title"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
         }

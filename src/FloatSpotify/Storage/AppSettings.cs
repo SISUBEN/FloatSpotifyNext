@@ -1,3 +1,4 @@
+using FloatSpotify.Localization;
 using FloatSpotify.Playback;
 using System.Text.Json.Serialization;
 
@@ -6,6 +7,13 @@ namespace FloatSpotify.Storage;
 public sealed class AppSettings
 {
     public PlaybackSource PlaybackSource { get; set; } = PlaybackSource.Spotify;
+
+    /// <summary>
+    /// 界面语言。<c>null</c>（默认）= 跟随操作系统首选 UI 语言；
+    /// 用户在下拉框里明确选过之后才会写进 settings.json。
+    /// </summary>
+    public AppLanguage? Language { get; set; }
+
     [JsonIgnore]
     public string SpotifyClientId { get; set; } = string.Empty;
     public double FontSize { get; set; } = 46;

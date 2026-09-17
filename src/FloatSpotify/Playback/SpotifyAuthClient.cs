@@ -4,6 +4,7 @@ using System.Net.Http;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
+using FloatSpotify.Localization;
 
 namespace FloatSpotify.Playback;
 
@@ -122,7 +123,7 @@ internal sealed class SpotifyAuthClient
         catch (HttpListenerException exception)
         {
             throw new SpotifyAuthorizationException(
-                "授权端口 8888 被占用。请先退出旧版 FloatSpotify，再从托盘选择“重新授权 Spotify”。",
+                "SpotifyAuth_PortInUse",
                 exception);
         }
 
@@ -155,17 +156,26 @@ internal sealed class SpotifyAuthClient
 
                 if (!string.Equals(returnedState, state, StringComparison.Ordinal))
                 {
-                    await WriteBrowserResponseAsync(context.Response, HttpStatusCode.BadRequest, "授权校验失败，可以关闭此页面。");
-                    throw new SpotifyAuthorizationException("Spotify 授权校验失败，请重新授权。");
+                    await WriteBrowserResponseAsync(
+                        context.Response,
+                        HttpStatusCode.BadRequest,
+                        Loc.T("SpotifyAuth_Browser_StateMismatch"));
+                    throw new SpotifyAuthorizationException("SpotifyAuth_StateMismatch");
                 }
 
                 if (!string.IsNullOrWhiteSpace(error) || string.IsNullOrWhiteSpace(code))
                 {
-                    await WriteBrowserResponseAsync(context.Response, HttpStatusCode.BadRequest, "Spotify 授权未完成，可以关闭此页面。");
-                    throw new SpotifyAuthorizationException("Spotify 授权被取消。");
+                    await WriteBrowserResponseAsync(
+                        context.Response,
+                        HttpStatusCode.BadRequest,
+                        Loc.T("SpotifyAuth_Browser_Cancelled"));
+                    throw new SpotifyAuthorizationException("SpotifyAuth_Cancelled");
                 }
 
-                await WriteBrowserResponseAsync(context.Response, HttpStatusCode.OK, "Spotify 授权成功，可以关闭此页面。");
+                await WriteBrowserResponseAsync(
+                    context.Response,
+                    HttpStatusCode.OK,
+                    Loc.T("SpotifyAuth_Browser_Success"));
                 return await ExchangeCodeAsync(clientId, code, verifier, cancellationToken);
             }
         }
@@ -220,7 +230,7 @@ internal sealed class SpotifyAuthClient
             cancellationToken);
 
         if (!response.IsSuccessStatusCode)
-            throw new SpotifyAuthorizationException("Spotify 授权已失效，需要重新授权。");
+            throw new SpotifyAuthorizationException("SpotifyAuth_Expired");
 
         using var document = JsonDocument.Parse(
             await response.Content.ReadAsStreamAsync(cancellationToken));
@@ -234,7 +244,7 @@ internal sealed class SpotifyAuthClient
             : existingRefreshToken;
 
         if (string.IsNullOrWhiteSpace(accessToken))
-            throw new SpotifyAuthorizationException("Spotify 未返回可用的访问令牌。");
+            throw new SpotifyAuthorizationException("SpotifyAuth_NoAccessToken");
 
         return new SpotifySession(
             clientId,
@@ -267,23 +277,25 @@ internal sealed class SpotifyAuthClient
         var clientId = _clientIdProvider()?.Trim();
         if (clientId is not { Length: 32 } || clientId.Any(character => !Uri.IsHexDigit(character)))
         {
-            throw new SpotifyAuthorizationException(
-                "请先打开设置，填写你自己的 32 位 Spotify Client ID。");
+            throw new SpotifyAuthorizationException("SpotifyAuth_MissingClientId");
         }
 
         return clientId;
     }
 }
 
+/// <summary>
+/// Spotify 授权失败。<see cref="Exception.Message"/> 是**取词那一刻**的译文，
+/// 所以界面上要跨语言存活的地方（比如悬浮窗里的授权错误）必须存 <see cref="Key"/> 再自己翻译。
+/// </summary>
 internal sealed class SpotifyAuthorizationException : Exception
 {
-    public SpotifyAuthorizationException(string message)
-        : base(message)
-    {
-    }
+    public SpotifyAuthorizationException(string messageKey)
+        : base(Loc.T(messageKey)) => Key = messageKey;
 
-    public SpotifyAuthorizationException(string message, Exception innerException)
-        : base(message, innerException)
-    {
-    }
+    public SpotifyAuthorizationException(string messageKey, Exception innerException)
+        : base(Loc.T(messageKey), innerException) => Key = messageKey;
+
+    /// <summary><see cref="Strings"/> 里的文案 key。</summary>
+    public string Key { get; }
 }

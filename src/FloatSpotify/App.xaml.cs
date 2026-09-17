@@ -2,6 +2,7 @@ using System.Drawing;
 using System.IO;
 using System.Threading;
 using System.Windows;
+using FloatSpotify.Localization;
 using FloatSpotify.Playback;
 using FloatSpotify.Storage;
 using FloatSpotify.ViewModels;
@@ -26,20 +27,24 @@ public partial class App : System.Windows.Application
     {
         base.OnStartup(e);
 
+        var settingsStore = new SettingsStore();
+        var settings = settingsStore.Load();
+
+        // 语言必须在建任何窗口 / 视图模型之前定下来：有些文案是在构造函数里取的，
+        // 之后再改语言那些地方就得等下一次刷新了。null = 跟随系统。
+        Loc.Language = Loc.Resolve(Loc.ToChoice(settings.Language));
+
         _instanceMutex = new Mutex(true, "Local\\FloatSpotify.Next", out var isFirstInstance);
         if (!isFirstInstance)
         {
             System.Windows.MessageBox.Show(
-                "FloatSpotify Next is already running. Use its tray icon to restore the lyric.",
-                "FloatSpotify",
+                Loc.T("App_AlreadyRunning_Message"),
+                Loc.T("App_Title"),
                 MessageBoxButton.OK,
                 MessageBoxImage.Information);
             Shutdown();
             return;
         }
-
-        var settingsStore = new SettingsStore();
-        var settings = settingsStore.Load();
 
         // 取词诊断默认关闭。放在这里而不是协调器里：这是「进程启动了」这件事，
         // 而且要让日志文件立刻出现 —— 否则用户设好开关却看不到文件，会以为没生效。
@@ -97,14 +102,6 @@ public partial class App : System.Windows.Application
 
     private void CreateTrayIcon()
     {
-        var menu = new Forms.ContextMenuStrip();
-        menu.Items.Add("显示歌词", null, (_, _) => RunOnUiThread(ShowOverlay));
-        menu.Items.Add("打开设置", null, (_, _) => RunOnUiThread(ShowSettings));
-        menu.Items.Add("解锁歌词", null, (_, _) => RunOnUiThread(UnlockOverlay));
-        menu.Items.Add("重新授权 Spotify", null, (_, _) => RunOnUiThread(ReauthorizeSpotify));
-        menu.Items.Add(new Forms.ToolStripSeparator());
-        menu.Items.Add("退出", null, (_, _) => RunOnUiThread(ExitApplication));
-
         _trayIconImage = LoadTrayIcon();
 
         _trayIcon = new Forms.NotifyIcon
@@ -113,9 +110,36 @@ public partial class App : System.Windows.Application
             Icon = _trayIconImage ?? SystemIcons.Information,
             Text = "FloatSpotify Next",
             Visible = true,
-            ContextMenuStrip = menu
+            ContextMenuStrip = CreateTrayMenu()
         };
         _trayIcon.DoubleClick += (_, _) => RunOnUiThread(ShowOverlay);
+
+        // 托盘菜单是 Forms 的对象、不参与 WPF 绑定，语言变了只能整个重建。
+        Loc.LanguageChanged += () => RunOnUiThread(RebuildTrayMenu);
+    }
+
+    private static Forms.ContextMenuStrip CreateTrayMenu()
+    {
+        var menu = new Forms.ContextMenuStrip();
+        menu.Items.Add(Loc.T("Tray_ShowLyrics"), null, (_, _) => Instance?.ShowOverlay());
+        menu.Items.Add(Loc.T("Tray_OpenSettings"), null, (_, _) => Instance?.ShowSettings());
+        menu.Items.Add(Loc.T("Tray_UnlockLyrics"), null, (_, _) => Instance?.UnlockOverlay());
+        menu.Items.Add(Loc.T("Tray_ReauthorizeSpotify"), null, (_, _) => Instance?.ReauthorizeSpotify());
+        menu.Items.Add(new Forms.ToolStripSeparator());
+        menu.Items.Add(Loc.T("Tray_Exit"), null, (_, _) => Instance?.ExitApplication());
+        return menu;
+    }
+
+    private static App? Instance => System.Windows.Application.Current as App;
+
+    private void RebuildTrayMenu()
+    {
+        if (_trayIcon is null || _isExiting)
+            return;
+
+        var previous = _trayIcon.ContextMenuStrip;
+        _trayIcon.ContextMenuStrip = CreateTrayMenu();
+        previous?.Dispose();
     }
 
     /// <summary>

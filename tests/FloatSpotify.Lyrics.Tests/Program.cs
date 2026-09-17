@@ -37,6 +37,11 @@ internal static class Program
             OverlayRegression.Probe();
             return;
         }
+        if (args.FirstOrDefault() == "--i18n-probe")
+        {
+            LocalizationProbe.Probe();
+            return;
+        }
         if (args.FirstOrDefault() == "--demo")
         {
             new Application().Run(new LyricDemoWindow(args.ElementAtOrDefault(1)));

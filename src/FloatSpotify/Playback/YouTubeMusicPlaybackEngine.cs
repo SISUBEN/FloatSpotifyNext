@@ -3,6 +3,7 @@ using System.Net.Http;
 using System.Net.Http.Headers;
 using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
+using FloatSpotify.Localization;
 using Windows.Media.Control;
 
 namespace FloatSpotify.Playback;
@@ -85,7 +86,7 @@ public sealed class YouTubeMusicPlaybackEngine : IPlaybackEngine, IDisposable
         var session = await GetSessionForCommandAsync(cancellationToken);
         if (session is null)
         {
-            SetStatusMessage("未找到 YouTube Music 媒体会话", TimeSpan.FromSeconds(5));
+            SetStatusMessage(Loc.T("Ytm_Status_NoSession"), TimeSpan.FromSeconds(5));
             return;
         }
 
@@ -100,13 +101,13 @@ public sealed class YouTubeMusicPlaybackEngine : IPlaybackEngine, IDisposable
             };
 
             if (!succeeded)
-                SetStatusMessage("浏览器未接受播放控制命令", TimeSpan.FromSeconds(5));
+                SetStatusMessage(Loc.T("Ytm_Status_CommandRejected"), TimeSpan.FromSeconds(5));
 
             _nextPollAt = DateTimeOffset.MinValue;
         }
         catch (COMException)
         {
-            SetStatusMessage("YouTube Music 媒体会话已失效，正在重新连接", TimeSpan.FromSeconds(5));
+            SetStatusMessage(Loc.T("Ytm_Status_SessionExpired"), TimeSpan.FromSeconds(5));
             lock (_stateGate)
                 _session = null;
         }
@@ -165,7 +166,7 @@ public sealed class YouTubeMusicPlaybackEngine : IPlaybackEngine, IDisposable
             lock (_stateGate)
             {
                 _managerTask = null;
-                _managerError = "无法读取 Windows 媒体会话";
+                _managerError = "Ytm_ManagerError";
                 _nextManagerAttemptAt = DateTimeOffset.UtcNow.AddSeconds(5);
             }
         }
@@ -260,7 +261,7 @@ public sealed class YouTubeMusicPlaybackEngine : IPlaybackEngine, IDisposable
         }
         catch (Exception exception) when (exception is COMException or InvalidOperationException)
         {
-            SetStatusMessage("YouTube Music 媒体状态暂时不可用", TimeSpan.FromSeconds(4));
+            SetStatusMessage(Loc.T("Ytm_Status_Unavailable"), TimeSpan.FromSeconds(4));
             lock (_stateGate)
             {
                 _session = null;
@@ -395,9 +396,9 @@ public sealed class YouTubeMusicPlaybackEngine : IPlaybackEngine, IDisposable
             {
                 return new PlaybackFrame(
                     "YouTube Music",
-                    "媒体会话不可用",
-                    _managerError,
-                    "请确认系统为 Windows 10 1809 或更高版本",
+                    Loc.T("Ytm_SessionUnavailable"),
+                    Loc.T(_managerError),
+                    Loc.T("Ytm_SessionUnavailableHint"),
                     false,
                     TimeSpan.Zero,
                     TimeSpan.Zero,
@@ -408,8 +409,8 @@ public sealed class YouTubeMusicPlaybackEngine : IPlaybackEngine, IDisposable
             {
                 return new PlaybackFrame(
                     "YouTube Music",
-                    "正在连接",
-                    "正在连接 Windows 媒体会话…",
+                    Loc.T("Ytm_Connecting"),
+                    Loc.T("Ytm_ConnectingDetail"),
                     string.Empty,
                     false,
                     TimeSpan.Zero,
@@ -421,9 +422,9 @@ public sealed class YouTubeMusicPlaybackEngine : IPlaybackEngine, IDisposable
             {
                 return new PlaybackFrame(
                     "YouTube Music",
-                    "未播放",
-                    "YouTube Music 当前没有播放内容",
-                    "请在浏览器或 PWA 中开始播放",
+                    Loc.T("Ytm_Idle"),
+                    Loc.T("Ytm_IdleDetail"),
+                    Loc.T("Ytm_IdleHint"),
                     false,
                     TimeSpan.Zero,
                     TimeSpan.Zero,
@@ -445,17 +446,17 @@ public sealed class YouTubeMusicPlaybackEngine : IPlaybackEngine, IDisposable
             if (_lyricsTask is not null && _lyrics.Count == 0)
             {
                 currentLine = $"{_snapshot.Artist} · {_snapshot.Track}";
-                nextLine = "正在匹配同步歌词…";
+                nextLine = Loc.T("Lyrics_Matching");
             }
             else if (_lyrics.Count == 0)
             {
                 currentLine = $"{_snapshot.Artist} · {_snapshot.Track}";
-                nextLine = "暂未找到歌词，将自动重试";
+                nextLine = Loc.T("Lyrics_NotFound_Retrying");
             }
             else
             {
                 currentLine = currentIndex >= 0 ? _lyrics[currentIndex].Text : "♪";
-                nextLine = currentIndex >= 0 && _lyrics[currentIndex].IsPlainText ? "未同步歌词 · 滚动查看全文" :
+                nextLine = currentIndex >= 0 && _lyrics[currentIndex].IsPlainText ? Loc.T("Overlay_UnsyncedScroll") :
                     currentIndex + 1 < _lyrics.Count
                     ? _lyrics[currentIndex + 1].Text
                     : string.Empty;

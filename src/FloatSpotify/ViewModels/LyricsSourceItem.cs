@@ -1,3 +1,4 @@
+using FloatSpotify.Localization;
 using FloatSpotify.Playback;
 
 namespace FloatSpotify.ViewModels;
@@ -7,6 +8,11 @@ namespace FloatSpotify.ViewModels;
 /// <para>
 /// 列表顺序即优先级，所以 <see cref="CanMoveUp"/> / <see cref="CanMoveDown"/>
 /// 由 <see cref="OverlayViewModel"/> 在重排后统一刷新，这里只负责暴露状态。
+/// </para>
+/// <para>
+/// 显示名和说明都是语言相关的，所以构造时挂上 <see cref="Loc.LanguageChanged"/>：
+/// 语言一变就主动通知 WPF 重新取值，否则这几行会一直停在旧语言。
+/// （实例与进程同寿，不必取消订阅。）
 /// </para>
 /// </summary>
 public sealed class LyricsSourceItem : ObservableObject
@@ -22,17 +28,19 @@ public sealed class LyricsSourceItem : ObservableObject
         Source = source;
         _enabled = enabled;
         _onChanged = onChanged;
+
+        Loc.LanguageChanged += RefreshLocalizedText;
     }
 
     public LyricsSource Source { get; }
 
     public string DisplayName => Source switch
     {
-        LyricsSource.Lrclib => "LRCLIB",
-        LyricsSource.Karalyr => "Karalyr · 逐字",
-        LyricsSource.BetterLyrics => "Better Lyrics · 逐字",
-        LyricsSource.NetEase => "网易云音乐",
-        LyricsSource.Kugou => "酷狗音乐 · 逐字",
+        LyricsSource.Lrclib => Loc.T("LyricsSource_Lrclib_Name"),
+        LyricsSource.Karalyr => Loc.T("LyricsSource_Karalyr_Name"),
+        LyricsSource.BetterLyrics => Loc.T("LyricsSource_BetterLyrics_Name"),
+        LyricsSource.NetEase => Loc.T("LyricsSource_NetEase_Name"),
+        LyricsSource.Kugou => Loc.T("LyricsSource_Kugou_Name"),
         _ => Source.ToString()
     };
 
@@ -41,17 +49,24 @@ public sealed class LyricsSourceItem : ObservableObject
     /// </summary>
     public bool IsUnofficial => Source is LyricsSource.NetEase or LyricsSource.Kugou;
 
-    public string Note => IsUnofficial ? "非官方接口" : "公开接口";
+    public string Note => Loc.T(IsUnofficial ? "LyricsSource_Unofficial" : "LyricsSource_Official");
 
     public string Description => Source switch
     {
-        LyricsSource.Lrclib => "lrclib.net。免费、无需鉴权的社区歌词库，欧美曲库覆盖好。",
-        LyricsSource.Karalyr => "公开 Enhanced LRC 逐字源；未命中、超时或限流时自动回退。",
-        LyricsSource.BetterLyrics => "TTML 逐字/音节源；仅使用匿名缓存，需密钥或低置信度时自动回退。",
-        LyricsSource.NetEase => "中文曲库覆盖明显更好。用的是非公开接口，可能随时失效，请自行判断是否使用。",
-        LyricsSource.Kugou => "中文曲库覆盖好，且返回 KRC 逐字歌词。用的是非公开接口，可能随时失效，请自行判断是否使用。",
+        LyricsSource.Lrclib => Loc.T("LyricsSource_Lrclib_Description"),
+        LyricsSource.Karalyr => Loc.T("LyricsSource_Karalyr_Description"),
+        LyricsSource.BetterLyrics => Loc.T("LyricsSource_BetterLyrics_Description"),
+        LyricsSource.NetEase => Loc.T("LyricsSource_NetEase_Description"),
+        LyricsSource.Kugou => Loc.T("LyricsSource_Kugou_Description"),
         _ => string.Empty
     };
+
+    private void RefreshLocalizedText()
+    {
+        OnPropertyChanged(nameof(DisplayName));
+        OnPropertyChanged(nameof(Note));
+        OnPropertyChanged(nameof(Description));
+    }
 
     public bool Enabled
     {
