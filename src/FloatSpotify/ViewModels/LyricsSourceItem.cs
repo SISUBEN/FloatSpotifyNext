@@ -3,18 +3,6 @@ using FloatSpotify.Playback;
 
 namespace FloatSpotify.ViewModels;
 
-/// <summary>
-/// 设置面板里的一行歌词源。
-/// <para>
-/// 列表顺序即优先级，所以 <see cref="CanMoveUp"/> / <see cref="CanMoveDown"/>
-/// 由 <see cref="OverlayViewModel"/> 在重排后统一刷新，这里只负责暴露状态。
-/// </para>
-/// <para>
-/// 显示名和说明都是语言相关的，所以构造时挂上 <see cref="Loc.LanguageChanged"/>：
-/// 语言一变就主动通知 WPF 重新取值，否则这几行会一直停在旧语言。
-/// （实例与进程同寿，不必取消订阅。）
-/// </para>
-/// </summary>
 public sealed class LyricsSourceItem : ObservableObject
 {
     private readonly Action<LyricsSourceItem> _onChanged;
@@ -44,9 +32,6 @@ public sealed class LyricsSourceItem : ObservableObject
         _ => Source.ToString()
     };
 
-    /// <summary>
-    /// 非官方接口的源要在界面上明确标出来 —— 这类源随时可能失效，不能让用户以为它和官方一样稳。
-    /// </summary>
     public bool IsUnofficial => Source is LyricsSource.NetEase or LyricsSource.Kugou;
 
     public string Note => Loc.T(IsUnofficial ? "LyricsSource_Unofficial" : "LyricsSource_Official");

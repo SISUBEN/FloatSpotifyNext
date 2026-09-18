@@ -16,8 +16,6 @@ public partial class SpotifySetupWindow : Window
     {
         InitializeComponent();
 
-        // 复制成功后按钮要变成「已复制」，但那个文案也得跟着语言走 ——
-        // 直接赋值 Content 会把 {loc:Tr} 的绑定覆盖掉，所以改成语言变化时重算。
         Loc.LanguageChanged += RefreshCopyButton;
         Closed += (_, _) => Loc.LanguageChanged -= RefreshCopyButton;
     }

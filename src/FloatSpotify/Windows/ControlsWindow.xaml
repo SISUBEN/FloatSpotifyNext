@@ -12,11 +12,6 @@
         SizeToContent="WidthAndHeight"
         ShowInTaskbar="False"
         Topmost="True">
-    <!--
-        界面文案统一走 {loc:Tr <key>}，key 定义在 Localization/Strings.cs。
-        它返回的是绑定（源是 Loc.Instance 的索引器），所以语言切换后这里会自己刷新。
-        注意：不要把它用在 Style/Setter 的 Value 上 —— 那里拿不到依赖属性，只会取到当时的值。
-    -->
     <Window.Resources>
         <Style x:Key="IconButton" TargetType="Button">
             <Setter Property="Width" Value="38" />
@@ -103,7 +98,6 @@
             <Setter Property="Foreground" Value="Black" />
         </Style>
 
-        <!-- 设置面板里每一行的「标签列」宽度，改这一处就够 -->
         <Style x:Key="FieldLabel" TargetType="TextBlock">
             <Setter Property="VerticalAlignment" Value="Center" />
             <Setter Property="Foreground" Value="#DFFFFFFF" />
@@ -203,10 +197,6 @@
                         <ColumnDefinition Width="*" />
                     </Grid.ColumnDefinitions>
                     <TextBlock Style="{StaticResource FieldLabel}" Text="{loc:Tr Language_Label}" />
-                    <!--
-                        ItemsSource + DisplayMemberPath：选中项在收起状态下也走模板绑定，
-                        语言切换后会立刻跟着变（直接写 ComboBoxItem 绑 Content 会停在旧文案）。
-                    -->
                     <ComboBox Grid.Column="1"
                               Style="{StaticResource FieldDropDown}"
                               ItemsSource="{Binding LanguageOptions}"
@@ -495,8 +485,6 @@
                                                        Text="{Binding Note}">
                                                 <TextBlock.Style>
                                                     <Style TargetType="TextBlock">
-                                                        <!-- Foreground 只在这里设，不能写成局部属性，
-                                                             否则局部值会盖掉下面的触发器 -->
                                                         <Setter Property="Foreground" Value="#59FFFFFF" />
                                                         <Style.Triggers>
                                                             <DataTrigger Binding="{Binding IsUnofficial}" Value="True">

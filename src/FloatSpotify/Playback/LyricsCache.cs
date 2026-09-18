@@ -5,16 +5,8 @@ using System.Text.Json;
 
 namespace FloatSpotify.Playback;
 
-/// <summary>
-/// 歌词的磁盘缓存。
-/// <para>
-/// 键里**必须**带源标识：LRCLIB 和网易云对同一首歌给出的歌词可能不同，
-/// 只用「歌手 + 曲名」做键的话两边会互相覆盖。
-/// </para>
-/// </summary>
 internal sealed class LyricsCache
 {
-    /// <summary>缓存格式版本。改键结构或条目结构时递增，让旧缓存自然失效。</summary>
     private const string CacheVersion = "v5";
 
     private readonly string _cacheDirectory;
@@ -27,9 +19,6 @@ internal sealed class LyricsCache
             "lyrics");
     }
 
-    /// <summary>
-    /// 读缓存。没有缓存、缓存损坏或读不出来都返回 null（当作没缓存）。
-    /// </summary>
     public async Task<IReadOnlyList<TimedLyric>?> TryReadAsync(
         LyricsSource source,
         string track,
@@ -70,9 +59,6 @@ internal sealed class LyricsCache
         }
     }
 
-    /// <summary>
-    /// 写缓存。**失败不影响播放** —— 缓存只是加速手段，磁盘满或没权限时静默放弃。
-    /// </summary>
     public async Task WriteAsync(
         LyricsSource source,
         string track,
@@ -88,7 +74,6 @@ internal sealed class LyricsCache
             var path = PathFor(source, track, artist, duration);
             Directory.CreateDirectory(Path.GetDirectoryName(path)!);
 
-            // 先写 .tmp 再原子替换，避免进程中途退出留下半截 JSON。
             temporaryPath = path + $".{Guid.NewGuid():N}.tmp";
 
             await using (var stream = File.Create(temporaryPath))

@@ -284,10 +284,6 @@ internal sealed class SpotifyAuthClient
     }
 }
 
-/// <summary>
-/// Spotify 授权失败。<see cref="Exception.Message"/> 是**取词那一刻**的译文，
-/// 所以界面上要跨语言存活的地方（比如悬浮窗里的授权错误）必须存 <see cref="Key"/> 再自己翻译。
-/// </summary>
 internal sealed class SpotifyAuthorizationException : Exception
 {
     public SpotifyAuthorizationException(string messageKey)
@@ -296,6 +292,5 @@ internal sealed class SpotifyAuthorizationException : Exception
     public SpotifyAuthorizationException(string messageKey, Exception innerException)
         : base(Loc.T(messageKey), innerException) => Key = messageKey;
 
-    /// <summary><see cref="Strings"/> 里的文案 key。</summary>
     public string Key { get; }
 }

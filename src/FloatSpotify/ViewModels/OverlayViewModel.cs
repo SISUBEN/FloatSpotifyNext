@@ -52,7 +52,6 @@ public sealed class OverlayViewModel : ObservableObject
             new LanguageOption(LanguageChoice.English)
         ];
 
-        // 启动时就把设置同步给协调器，别等用户去动它。
         ApplyLyricsSourceConfiguration();
     }
 
@@ -158,10 +157,6 @@ public sealed class OverlayViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// 界面语言。选「跟随系统」时设置里存 null，所以 getter 必须按
-    /// <see cref="Loc.ToChoice"/> 反查，不能直接读设置。
-    /// </summary>
     public LanguageChoice LanguageChoice
     {
         get => Loc.ToChoice(_settings.Language);
@@ -532,17 +527,10 @@ public sealed class OverlayViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// 设置面板里的歌词源列表。**列表顺序即优先级**，越靠前越先用。
-    /// </summary>
     public ObservableCollection<LyricsSourceItem> LyricsSources { get; }
 
-    /// <summary>「语言」下拉框的固定三项：跟随系统 / 简体中文 / English。</summary>
     public IReadOnlyList<LanguageOption> LanguageOptions { get; }
 
-    /// <summary>
-    /// 上移 / 下移一个歌词源，<paramref name="delta"/> 为 -1 表示上移（优先级更高）。
-    /// </summary>
     public void MoveLyricsSource(LyricsSourceItem item, int delta)
     {
         var index = LyricsSources.IndexOf(item);
@@ -552,7 +540,6 @@ public sealed class OverlayViewModel : ObservableObject
 
         LyricsSources.Move(index, target);
 
-        // 列表顺序就是优先级，重排后写回设置。
         _settings.LyricsSources = LyricsSources
             .Select(entry => new LyricsSourceOption
             {
@@ -587,10 +574,6 @@ public sealed class OverlayViewModel : ObservableObject
         }
     }
 
-    /// <summary>
-    /// 把当前「已启用 + 顺序」推给歌词协调器。协调器会递增 Revision，
-    /// 引擎下一次轮询就会为当前歌曲重新取词，不用等换歌。
-    /// </summary>
     private void ApplyLyricsSourceConfiguration()
     {
         _lyricsCoordinator.ApplyConfiguration(

@@ -14,14 +14,6 @@
         ShowInTaskbar="False"
         ShowActivated="False"
         Topmost="{Binding AlwaysOnTop}">
-    <!--
-        宽度刻意不写在 Window.Width 上。
-        Window.Width 和 SizeToContent 同时存在时，窗口尺寸走的是 WPF 自己那条计算路径，
-        出现过「窗口比歌词宽出一大截、滑条怎么调都不动」的情况
-        （settings.json 里 OverlayWidth 已经是 160，窗口宽度却没跟着变）。
-        改成 SizeToContent="WidthAndHeight" + 由 LyricSurface 的 Width 撑开：
-        窗口宽度只能等于内容宽度，两者不可能对不上。
-    -->
     <Grid>
         <Border x:Name="LyricSurface"
                 Width="{Binding OverlayWidth}"
@@ -36,21 +28,10 @@
                 LostMouseCapture="LyricSurface_LostMouseCapture">
             <Border.Style>
                 <Style TargetType="Border">
-                    <!--
-                        Background 不能是 {x:Null}：null 的画刷不参与命中测试，整个歌词就没法拖了。
-                        #01000000（alpha=1）既看不见、又能命中。
-                        BorderThickness 常驻 1，只切画刷颜色 —— 否则显示边框时会多出 2px，
-                        窗口尺寸会跳一下。
-                    -->
                     <Setter Property="Background" Value="#01000000" />
                     <Setter Property="BorderThickness" Value="1" />
                     <Setter Property="BorderBrush" Value="#00000000" />
                     <Style.Triggers>
-                        <!--
-                            打开设置面板时让悬浮窗显形。透明窗口平时看不出边界，
-                            用户没法判断「歌词宽度」滑条到底有没有生效；显形之后
-                            窗口实际多大一目了然。关掉设置面板立刻恢复全透明。
-                        -->
                         <DataTrigger Binding="{Binding IsSettingsOpen}" Value="True">
                             <Setter Property="Background" Value="#26000000" />
                             <Setter Property="BorderBrush" Value="#40FFFFFF" />
@@ -59,11 +40,6 @@
                 </Style>
             </Border.Style>
             <StackPanel Opacity="{Binding OverlayOpacity}">
-                <!--
-                    ToolTip 写在元素上而不是触发器里：触发器 Setter 的 Value 不是依赖属性，
-                    {loc:Tr} 在那儿只会取到打开窗口那一刻的文案，之后切语言不会更新。
-                    平时 IsHitTestVisible=False，tooltip 本来也弹不出来，所以挂在这里等价。
-                -->
                 <ScrollViewer x:Name="LyricScroller"
                               HorizontalScrollBarVisibility="Disabled"
                               ToolTip="{loc:Tr Overlay_PlainText_Tooltip}">

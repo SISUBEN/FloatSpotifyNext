@@ -154,21 +154,16 @@ internal static class Program
         Check(LyricVersionMatch.CandidateMatches("Side Quest King - English Ver.", "Side Quest King (English Version)"), "Equivalent language version labels accepted");
         Check(LyricVersionMatch.Language("Englishman in New York") is null, "Ordinary song titles do not imply a language version");
 
-        // ---- 酷狗 KRC ----
-        // 词偏移是**相对行起点**的，这是整个格式里最容易写错的一点。
         var krc = KrcParser.Parse("[1000,2000]<0,300,0>Hello <300,300,0>world\n[4000,1000]<0,500,0>Next");
         Check(krc.Count == 2 && krc[0].Text == "Hello world" && krc[0].Words.Count == 2 &&
               krc[0].Words[0].Start == S(1) && krc[0].Words[0].End == S(1.3) &&
               krc[0].Words[1].Start == S(1.3) && krc[0].Words[1].Text == "world",
             "KRC word offsets are relative to the line start");
-        // 实测 425 行里有 286 个词时长为 0、75 行相邻词起点相同 —— 都是真实数据，不能当畸形丢掉。
         var krcZero = KrcParser.Parse("[0,1000]<0,0,0>A<0,0,0>B<0,500,0>C");
         Check(krcZero[0].Words.Count == 3 && krcZero[0].Words[0].Start == krcZero[0].Words[1].Start,
             "KRC zero-duration and same-start words are preserved");
-        // 实测 22/425 行的词会越出行区间 —— 所以行时长不能拿来卡词的边界。
         var krcOverrun = KrcParser.Parse("[1000,500]<0,300,0>A<300,900,0>B\n[5000,100]C");
         Check(krcOverrun[0].Words.Count == 2, "KRC words may exceed the declared line duration");
-        // 越过下一行起点才是真的对不齐，这时整行退回行级。
         var krcCrossed = KrcParser.Parse("[1000,5000]<0,300,0>A <300,900,0>B\n[1500,100]C");
         Check(krcCrossed[0].Text == "A B" && krcCrossed[0].Words.Count == 0,
             "KRC words past the next line degrade to line sync");
@@ -185,7 +180,6 @@ internal static class Program
             "KRC offset tag shifts the timeline");
         Check(KrcParser.Parse("[00:01]Plain LRC").Count == 0, "Plain LRC is not mistaken for KRC");
 
-        // ---- 候选打分（网易云 / 酷狗共用同一份判定）----
         Check(LyricsMatchScore.Score("Shape of You", "Ed Sheeran", 233, "Shape of You", "Ed Sheeran", S(233)) == 100,
             "Exact title, artist and duration score full marks");
         Check(LyricsMatchScore.Score("Shape of You", "Ed Sheeran", 300, "Shape of You", "Ed Sheeran", S(233)) == 50,
@@ -197,10 +191,8 @@ internal static class Program
         Check(LyricsMatchScore.Score("Blinding Lights", "The Weeknd", 200, "Shape of You", "Ed Sheeran", S(233)) == 0,
             "A different title scores zero");
 
-        // ---- 酷狗 filename 切分 ----
         Check(KugouLyricsProvider.ScoreFilename("周杰伦 - 晴天", 269, "晴天", "周杰伦", S(269)) >= LyricsMatchScore.Minimum,
             "Kugou 'artist - title' filename is matched");
-        // 实测存在的脏数据：正确段既不在固定位置，也不跟歌手相邻。
         Check(KugouLyricsProvider.ScoreFilename("hjt - 晴天 - 周杰伦 - hjt", 269, "晴天", "周杰伦", S(269)) >= LyricsMatchScore.Minimum,
             "Kugou filename with extra separators still matches");
         Check(KugouLyricsProvider.ScoreFilename("陈奕迅 - 十年", 200, "晴天", "周杰伦", S(269)) == 0,
@@ -244,13 +236,10 @@ internal static class Program
         coordinator = new LyricsCoordinator(new ILyricsProvider[] { timeout, lineProvider });
         coordinator.ApplyConfiguration(new[] { LyricsSource.Karalyr, LyricsSource.Lrclib });
         Check((await coordinator.GetAsync("x", "y", S(10), default))[0].Text == "Fallback", "Per-provider timeout falls through");
-        // 超时是「这一次请求没赶上」，不是「这个源坏了」。下一首歌必须照样再试它，
-        // 否则一次网络抖动就会把该源对所有歌静默 30 秒（旧行为）。
         var afterTimeout = await coordinator.GetAsync("timeout-next", "artist", S(10), default);
         Check(timeout.Calls == 2 && afterTimeout[0].Text == "Fallback",
             "Single-source timeout does not cool the source down for other tracks");
 
-        // 并发竞速：慢的行级源不能拖住已经可用的快源，首词延迟取决于最快命中的那个。
         var slowLine = new FakeProvider(LyricsSource.NetEase,
             async token => { await Task.Delay(2500, token); return LrcParser.Parse("[00:01]Slow"); });
         var fastLine = new FakeProvider(LyricsSource.Lrclib, _ => Task.FromResult(LrcParser.Parse("[00:01]Fast")));
@@ -262,8 +251,6 @@ internal static class Program
         Check(raced[0].Text == "Fast" && raceWatch.ElapsedMilliseconds < 1500,
             "Slow peer source does not delay an already-available line result");
 
-        // 反过来也一样：行级源很慢时逐字源不能跟着一起等。两波必须同时发出，
-        // 否则「行级源全落空」时逐字歌词要等到整波超时才出现。
         var stalledLine = new FakeProvider(LyricsSource.Lrclib,
             async token => { await Task.Delay(5000, token); return LrcParser.Parse("[00:01]Late lines"); });
         var quickWords = new FakeProvider(LyricsSource.Karalyr, _ => Task.FromResult(words));
@@ -275,8 +262,6 @@ internal static class Program
         Check(fromWords[0].Words.Count > 0 && wordWatch.ElapsedMilliseconds < 1500,
             "Word source is not held back by a slow line source");
 
-        // 酷狗产出的 KRC 是逐字，必须被当成「增强源」。漏了这一步（没加进 IsEnhancement）的话，
-        // 行级歌词一到就收手，酷狗的逐字永远用不上 —— 而且不会报任何错。
         var slowKugou = new FakeProvider(LyricsSource.Kugou,
             async token => { await Task.Delay(600, token); return words; });
         coordinator = new LyricsCoordinator(new ILyricsProvider[] { lineProvider, slowKugou });
@@ -392,14 +377,11 @@ internal static class Program
         var correctPlain = await new LrclibLyricsProvider(plainChinese, cache).GetAsync(chineseTitle, "artist", S(154), default);
         Check(correctPlain[0].IsPlainText && correctPlain[0].Text == "正确中文歌词", "Correct-language plain text preferred to wrong-language synchronization");
 
-        // 酷狗三步链路（搜索 → 查歌词文件 → 下载解码）离线跑通，
-        // 覆盖响应外的 HTML 注释、base64、krc1 魔数、循环异或、zlib 这一整条解密链路。
         HttpResponseMessage KugouResponse(HttpRequestMessage request, string content)
         {
             var url = request.RequestUri!.ToString();
             if (url.Contains("mobileservice.kugou.com"))
             {
-                // 真实响应外面裹着 <!--KG_TAG_RES_START-->，服务端必须能剥掉它。
                 return Json("<!--KG_TAG_RES_START-->" + JsonSerializer.Serialize(new
                 {
                     data = new { info = new[] { new { filename = "周杰伦 - 晴天", duration = 269, hash = "HASH-1" } } }
@@ -407,7 +389,6 @@ internal static class Program
             }
             if (url.Contains("krcs.kugou.com"))
             {
-                // candidates[].duration 是**毫秒**，和 info[].duration 的秒不是一回事。
                 return Json(JsonSerializer.Serialize(new
                 {
                     candidates = new[] { new { id = 123, accesskey = "KEY-1", song = "晴天", singer = "周杰伦", duration = 269000 } }
@@ -423,8 +404,6 @@ internal static class Program
               kugou[0].Words.Count == 2 && kugou[0].Words[0].Start == S(1),
             "Kugou three-step chain decodes KRC into word timings");
 
-        // 声明 fmt=krc 但实际返回明文 LRC 的情况是存在的：按魔数判断并降级到行级，
-        // 而不是整首没歌词。这里用独立的缓存目录，避免命中上一条的缓存。
         var plainCache = new LyricsCache(Path.Combine(Path.GetTempPath(), "FloatSpotify-tests-" + Guid.NewGuid().ToString("N")));
         using var plainKugouClient = new HttpClient(new RoutingHandler(request => KugouResponse(request,
             Convert.ToBase64String(Encoding.UTF8.GetBytes("[00:01]Plain fallback")))));
@@ -432,7 +411,6 @@ internal static class Program
         Check(plainKugou.Count == 1 && plainKugou[0].Text == "Plain fallback" && plainKugou[0].Words.Count == 0,
             "Kugou falls back to line lyrics when the payload is not KRC");
 
-        // 曲名对不上时宁可不给歌词：搜到的是别人的歌，取词这一步根本不该发生。
         var rejectCache = new LyricsCache(Path.Combine(Path.GetTempPath(), "FloatSpotify-tests-" + Guid.NewGuid().ToString("N")));
         var searchOnlyClient = new HttpClient(new RoutingHandler(request =>
             request.RequestUri!.ToString().Contains("mobileservice.kugou.com")
@@ -457,7 +435,6 @@ internal static class Program
 
         try
         {
-            // 默认必须完全静默：不设环境变量时连文件都不该出现。
             Environment.SetEnvironmentVariable(LyricsDiagnostics.EnvironmentVariable, null);
             var wordProvider = new FakeProvider(LyricsSource.Kugou, _ => Task.FromResult(words));
             var lineProvider = new FakeProvider(LyricsSource.Lrclib, _ => Task.FromResult(lines));
@@ -477,7 +454,6 @@ internal static class Program
             Console.WriteLine(text.TrimEnd());
             Console.WriteLine("--------------------------------");
 
-            // 「没跑」和「跑了没中」是两件事，排查时最需要区分。
             var missing = new FakeProvider(LyricsSource.NetEase,
                 _ => Task.FromResult<IReadOnlyList<TimedLyric>>(Array.Empty<TimedLyric>()));
             var repeatCoordinator = new LyricsCoordinator(new ILyricsProvider[] { missing, lineProvider });
@@ -488,8 +464,6 @@ internal static class Program
             Check(repeatText.Contains(LyricsOutcome.NotFound) && repeatText.Contains(LyricsOutcome.Remembered),
                 "Lyrics diagnostics distinguish 'found nothing' from 'skipped, remembered miss'");
 
-            // 提前收手时还在跑的源没人 await，日志里必须留下「没等它」的痕迹，
-            // 否则会误以为「酷狗失败了」，其实只是还没跑完。
             var slowLine = new FakeProvider(LyricsSource.BetterLyrics,
                 async token => { await Task.Delay(2000, token); return lines; });
             var fastWords = new FakeProvider(LyricsSource.Kugou, _ => Task.FromResult(words));
@@ -499,12 +473,9 @@ internal static class Program
             var abandonText = await File.ReadAllTextAsync(log);
             Check(abandonText.Contains(LyricsOutcome.Abandoned),
                 "Lyrics diagnostics record sources abandoned when the race stops early");
-            // 列宽必须容得下最长的源名，否则会粘成 "BetterLyricsabandoned"。
             Check(abandonText.Contains("BetterLyrics " + LyricsOutcome.Abandoned),
                 "Lyrics diagnostics keep the longest source name separated from its outcome");
 
-            // 开关文件：不必设环境变量、也不管程序是怎么启动的，建个空文件就开。
-            // 用户遇到的真实问题就是「在 PowerShell 里 set 了变量，但从开始菜单启动继承不到」。
             Environment.SetEnvironmentVariable(LyricsDiagnostics.EnvironmentVariable, null);
             Check(!LyricsDiagnostics.IsEnabled, "Lyrics diagnostics are off with neither switch present");
             await File.WriteAllTextAsync(LyricsDiagnostics.MarkerPath, string.Empty);
@@ -513,12 +484,10 @@ internal static class Program
             var markerText = await File.ReadAllTextAsync(log);
             Check(markerText.Contains("启动") && markerText.Contains("开关文件"),
                 "Lyrics diagnostics announce startup and name the switch that enabled them");
-            // 启动那一行必须让用户立刻看到「机制通了」，否则会以为开关没生效。
             Check(markerText.Contains("还没播放歌曲"), "Lyrics diagnostics explain why no fetch is logged yet");
             File.Delete(LyricsDiagnostics.MarkerPath);
             Check(!LyricsDiagnostics.IsEnabled, "Deleting the marker file turns lyrics diagnostics back off");
 
-            // 轮转：日志不能无限增长。（上面刚把两个开关都关掉了，这里重新打开。）
             Environment.SetEnvironmentVariable(LyricsDiagnostics.EnvironmentVariable, "1");
             await File.WriteAllTextAsync(log, new string('x', (2 * 1024 * 1024) + 1));
             await coordinator.GetAsync("rotate", "artist", S(10), default);
@@ -534,10 +503,6 @@ internal static class Program
         }
     }
 
-    /// <summary>
-    /// 真网络跑一遍「和正式版一样的五个源」，然后把诊断日志原样打出来。
-    /// 这是排查「到底哪个源在供词」时最直接的工具。
-    /// </summary>
     private static async Task LiveDiagnostics()
     {
         var directory = Path.Combine(Path.GetTempPath(), "FloatSpotify-livediag-" + Guid.NewGuid().ToString("N"));
@@ -596,8 +561,6 @@ internal static class Program
             result => Console.WriteLine($"LIVE Good Time available at {timer.ElapsedMilliseconds}ms; lines={result.Count}; wordLines={result.Count(line => line.Words.Count > 0)}"));
         Check(final.Any(line => !string.IsNullOrWhiteSpace(line.Text)), "LIVE Good Time keeps lyrics after enhancement requests");
 
-        // 酷狗是唯一一个「解密链路 + 两段匹配」都在我们这边的源，离线假响应只能证明自己跟自己对得上，
-        // 所以这里再对真实接口跑一遍。
         var kugouTimer = System.Diagnostics.Stopwatch.StartNew();
         var kugou = await new KugouLyricsProvider(http, cache).GetAsync("晴天", "周杰伦", S(269), default);
         kugouTimer.Stop();
@@ -686,10 +649,6 @@ internal static class Program
         protected override Task<HttpResponseMessage> SendAsync(HttpRequestMessage request, CancellationToken token)
         { Calls++; return Task.FromResult(response()); }
     }
-    /// <summary>
-    /// 按 URL 分发的假 handler。酷狗的链路要打三个不同的主机，
-    /// 单一响应的 <see cref="FakeHandler"/> 不够用。
-    /// </summary>
     private sealed class RoutingHandler(Func<HttpRequestMessage, HttpResponseMessage> route) : HttpMessageHandler
     {
         public int Calls { get; private set; }
@@ -700,10 +659,6 @@ internal static class Program
     private static HttpResponseMessage Json(string body) =>
         new(HttpStatusCode.OK) { Content = new StringContent(body, Encoding.UTF8, "application/json") };
 
-    /// <summary>
-    /// 造一份真实的 KRC 载荷：明文 → zlib → 16 字节循环异或 → 前置 <c>krc1</c> 魔数 → base64。
-    /// 密钥在这里**故意重写一遍**，这样测试是独立验证解密链路，而不是复述实现里的常量。
-    /// </summary>
     private static string KrcFixture(string plain)
     {
         byte[] key =

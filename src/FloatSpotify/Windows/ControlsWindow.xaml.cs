@@ -118,7 +118,6 @@ public partial class ControlsWindow : Window
 
     private void MoveLyricsSourceUp_Click(object sender, RoutedEventArgs e)
     {
-        // DataContext 就是这一行的 LyricsSourceItem，直接拿它调序，不用管索引。
         if (sender is FrameworkElement { DataContext: LyricsSourceItem item })
             _viewModel.MoveLyricsSource(item, -1);
     }

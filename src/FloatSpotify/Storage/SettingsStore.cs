@@ -82,10 +82,6 @@ public sealed class SettingsStore
         return settings;
     }
 
-    /// <summary>
-    /// 归一化歌词源列表：补齐缺失的源（新版本新增的）、丢弃未知或重复的源（旧版本遗留的），
-    /// 并保持原顺序（顺序 = 优先级）。
-    /// </summary>
     internal static List<LyricsSourceOption> NormalizeLyricsSources(
         List<LyricsSourceOption>? configured)
     {

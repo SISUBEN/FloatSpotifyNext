@@ -341,7 +341,6 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
 
             lock (_stateGate)
             {
-                // 除了换歌，歌词源配置变化（用户勾选/调序）也要重新取词。
                 var trackChanged = _snapshot?.Id != snapshot.Id ||
                                    _lyricsRevision != lyricsRevision;
                 _snapshot = snapshot;

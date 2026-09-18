@@ -1,40 +1,26 @@
 namespace FloatSpotify.Localization;
 
-/// <summary>
-/// 全部界面文案。**故意不用 .resx**：resx 会为每种语言生成一个卫星程序集
-/// （zh-Hans/FloatSpotify.Next.resources.dll），和本项目「零依赖 + 单文件发布 +
-/// <c>SatelliteResourceLanguages=en</c> 瘦身」的做法冲突，还得改 csproj 才能带上中文资源。
-/// 一张普通字典就够，而且两种语言写在同一行，漏翻一眼就能看出来。
-/// <para>
-/// 约定：key 用 <c>区域_用途</c> 的 ASCII 命名；带占位符的用 <c>{0}</c>，取的时候走 <see cref="Loc.F"/>。
-/// 新增文案时**必须同时填中文和英文**，缺失会回退成 key 本身（界面上会直接露出来）。
-/// </para>
-/// </summary>
 internal static class Strings
 {
     internal static readonly Dictionary<string, (string ChineseSimplified, string English)> Table =
         new(StringComparer.Ordinal)
         {
-            // ── 通用 ──────────────────────────────────────────────
             ["App_Title"] = ("FloatSpotify", "FloatSpotify"),
             ["App_AlreadyRunning_Message"] =
                 ("FloatSpotify Next 已在运行。请用托盘图标把歌词调出来。",
                  "FloatSpotify Next is already running. Use its tray icon to bring the lyrics back."),
 
-            // ── 托盘菜单 ──────────────────────────────────────────
             ["Tray_ShowLyrics"] = ("显示歌词", "Show lyrics"),
             ["Tray_OpenSettings"] = ("打开设置", "Settings"),
             ["Tray_UnlockLyrics"] = ("解锁歌词", "Unlock lyrics"),
             ["Tray_ReauthorizeSpotify"] = ("重新授权 Spotify", "Re-authorize Spotify"),
             ["Tray_Exit"] = ("退出", "Exit"),
 
-            // ── 语言选择 ──────────────────────────────────────────
             ["Language_Label"] = ("语言", "Language"),
             ["Language_System"] = ("跟随系统", "System default"),
             ["Language_ChineseSimplified"] = ("简体中文", "简体中文"),
             ["Language_English"] = ("English", "English"),
 
-            // ── 控制条 ────────────────────────────────────────────
             ["Controls_Title"] = ("FloatSpotify 控制条", "FloatSpotify Controls"),
             ["Controls_Previous"] = ("上一首", "Previous track"),
             ["Controls_PlayPause"] = ("播放或暂停", "Play or pause"),
@@ -75,7 +61,6 @@ internal static class Strings
                 ("使用上方 Client ID 在浏览器中登录 Spotify",
                  "Sign in to Spotify in your browser using the Client ID above"),
 
-            // ── 屏幕位置预设 ──────────────────────────────────────
             ["Placement_Custom"] = ("自由拖动", "Free drag"),
             ["Placement_Top"] = ("顶部居中", "Top center"),
             ["Placement_Center"] = ("屏幕中央", "Center"),
@@ -85,21 +70,18 @@ internal static class Strings
             ["Placement_BottomLeft"] = ("左下角", "Bottom left"),
             ["Placement_BottomRight"] = ("右下角", "Bottom right"),
 
-            // ── 字体下拉框的显示名（Tag 里是真实字体名，不翻译）────
             ["Font_SegoeUi"] = ("Segoe UI Variable", "Segoe UI Variable"),
             ["Font_MicrosoftYaHei"] = ("微软雅黑", "Microsoft YaHei"),
             ["Font_YuGothic"] = ("游ゴシック", "Yu Gothic"),
             ["Font_MalgunGothic"] = ("맑은 고딕", "Malgun Gothic"),
             ["Font_Cascadia"] = ("等宽 Cascadia", "Cascadia Mono"),
 
-            // ── 文字颜色预设 ──────────────────────────────────────
             ["Color_White"] = ("白色", "White"),
             ["Color_SpotifyGreen"] = ("Spotify 绿", "Spotify green"),
             ["Color_Cyan"] = ("青色", "Cyan"),
             ["Color_Gold"] = ("金色", "Gold"),
             ["Color_Rose"] = ("玫红", "Rose"),
 
-            // ── 歌词源名称 / 标签 / 说明 ──────────────────────────
             ["LyricsSource_Lrclib_Name"] = ("LRCLIB", "LRCLIB"),
             ["LyricsSource_Karalyr_Name"] = ("Karalyr · 逐字", "Karalyr · word-level"),
             ["LyricsSource_BetterLyrics_Name"] = ("Better Lyrics · 逐字", "Better Lyrics · word-level"),
@@ -126,7 +108,6 @@ internal static class Strings
                  "Good coverage of Chinese-language catalogues and returns word-level KRC lyrics. It uses an " +
                  "unofficial API that may break at any time, so enable it at your own discretion."),
 
-            // ── 悬浮歌词本身的兜底文案 ────────────────────────────
             ["Overlay_Connecting"] = ("正在连接播放状态…", "Connecting to playback…"),
             ["Overlay_NoLyrics_Hint"] =
                 ("暂无歌词 · 点击打开控制条", "No lyrics yet · click to open the controls"),
@@ -135,11 +116,9 @@ internal static class Strings
                  "Unsynced lyrics: scroll to read the full text, with no automatic highlighting"),
             ["Overlay_UnsyncedScroll"] = ("未同步歌词 · 滚动查看全文", "Unsynced lyrics · scroll to read"),
 
-            // ── 取词过程中的提示（两个引擎共用）──────────────────
             ["Lyrics_Matching"] = ("正在匹配同步歌词…", "Matching synced lyrics…"),
             ["Lyrics_NotFound_Retrying"] = ("暂未找到歌词，将自动重试", "No lyrics found yet, retrying automatically"),
 
-            // ── Spotify 引擎 ──────────────────────────────────────
             ["Spotify_NeedsAuth"] = ("需要授权", "Authorization required"),
             ["Spotify_ReauthorizeHint"] =
                 ("点击歌词打开设置后可重新授权", "Click the lyrics, open settings, then re-authorize"),
@@ -182,7 +161,6 @@ internal static class Strings
             ["Spotify_Retry_Seconds"] =
                 ("Spotify 将于 {0} 自动重试（{1} 秒）", "Spotify will retry at {0} (in {1} s)"),
 
-            // ── Spotify 授权流程（含浏览器里显示的那几页）─────────
             ["SpotifyAuth_PortInUse"] =
                 ("授权端口 8888 被占用。请先退出旧版 FloatSpotify，再从托盘选择“重新授权 Spotify”。",
                  "Authorization port 8888 is already in use. Quit the older FloatSpotify first, then pick " +
@@ -207,7 +185,6 @@ internal static class Strings
                 ("请先打开设置，填写你自己的 32 位 Spotify Client ID。",
                  "Open settings first and enter your own 32-character Spotify Client ID."),
 
-            // ── YouTube Music 引擎 ────────────────────────────────
             ["Ytm_SessionUnavailable"] = ("媒体会话不可用", "Media session unavailable"),
             ["Ytm_SessionUnavailableHint"] =
                 ("请确认系统为 Windows 10 1809 或更高版本", "Requires Windows 10 1809 or later"),
@@ -230,7 +207,6 @@ internal static class Strings
             ["Ytm_Status_Unavailable"] =
                 ("YouTube Music 媒体状态暂时不可用", "YouTube Music media state is temporarily unavailable"),
 
-            // ── Spotify Client ID 配置窗口 ────────────────────────
             ["Setup_Title"] = ("配置 Spotify Client ID", "Set up your Spotify Client ID"),
             ["Setup_Step1"] =
                 ("1. 打开 Spotify Developer Dashboard，登录后创建 App；如果页面询问 API，请选择 Web API。",

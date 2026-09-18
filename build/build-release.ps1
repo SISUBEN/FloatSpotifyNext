@@ -92,9 +92,6 @@ Invoke-Publish -Profile 'Windows-x64' -OutDir $selfContained
 Invoke-Publish -Profile 'FrameworkDependent-x64' -OutDir $frameworkDependent
 Invoke-Publish -Profile 'Portable-SingleFile' -OutDir $portable
 
-# ---- Zip packages ----
-# 产物命名统一为 {ProductName}-{Arch}-v{Version}-{variant}.{ext}
-# 改这里的同时要改 installer\FloatSpotify.Next.iss 里的同名 #define，否则安装包和 zip 会两套名字。
 $ProductName = 'FloatSpotifyNext'
 $Arch = 'x86_64'
 
@@ -110,9 +107,7 @@ function New-ArtifactZip {
     Write-Host ''
 }
 
-# 自包含单文件：解压即用，不需要装运行时
 New-ArtifactZip -SourceDir $portable -Variant 'portable'
-# 框架依赖：体积最小，但要求用户已装 .NET 8 桌面运行时
 New-ArtifactZip -SourceDir $frameworkDependent -Variant 'framework'
 
 # ---- Installers ----

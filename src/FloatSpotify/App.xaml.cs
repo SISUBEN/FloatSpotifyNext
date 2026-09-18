@@ -30,8 +30,6 @@ public partial class App : System.Windows.Application
         var settingsStore = new SettingsStore();
         var settings = settingsStore.Load();
 
-        // 语言必须在建任何窗口 / 视图模型之前定下来：有些文案是在构造函数里取的，
-        // 之后再改语言那些地方就得等下一次刷新了。null = 跟随系统。
         Loc.Language = Loc.Resolve(Loc.ToChoice(settings.Language));
 
         _instanceMutex = new Mutex(true, "Local\\FloatSpotify.Next", out var isFirstInstance);
@@ -46,12 +44,8 @@ public partial class App : System.Windows.Application
             return;
         }
 
-        // 取词诊断默认关闭。放在这里而不是协调器里：这是「进程启动了」这件事，
-        // 而且要让日志文件立刻出现 —— 否则用户设好开关却看不到文件，会以为没生效。
         LyricsDiagnostics.AnnounceStartup();
 
-        // 歌词源协调器只建一个，两个播放引擎共用 —— 同一时刻只有一个引擎在跑，
-        // 共用可以保证「启用哪些源、什么顺序」这份配置只有一处真相。
         var lyricsCoordinator = new LyricsCoordinator();
 
         _playbackEngine = new PlaybackCoordinator(
@@ -80,7 +74,6 @@ public partial class App : System.Windows.Application
         _lifetime?.Cancel();
         _lifetime?.Dispose();
         _playbackEngine?.Dispose();
-        // 先释放托盘图标，再释放它引用的 GDI 图标句柄。
         _trayIcon?.Dispose();
         _trayIconImage?.Dispose();
 
@@ -106,7 +99,6 @@ public partial class App : System.Windows.Application
 
         _trayIcon = new Forms.NotifyIcon
         {
-            // 取不到资源时退回系统图标，保证托盘不会空白。
             Icon = _trayIconImage ?? SystemIcons.Information,
             Text = "FloatSpotify Next",
             Visible = true,
@@ -114,7 +106,6 @@ public partial class App : System.Windows.Application
         };
         _trayIcon.DoubleClick += (_, _) => RunOnUiThread(ShowOverlay);
 
-        // 托盘菜单是 Forms 的对象、不参与 WPF 绑定，语言变了只能整个重建。
         Loc.LanguageChanged += () => RunOnUiThread(RebuildTrayMenu);
     }
 
@@ -142,10 +133,6 @@ public partial class App : System.Windows.Application
         previous?.Dispose();
     }
 
-    /// <summary>
-    /// 从嵌入资源里取出 Assets/app.ico，并按当前 DPI 挑选最合适的那一帧
-    /// （托盘是小图标，直接用 256px 那一帧会被系统粗暴缩放，边缘发虚）。
-    /// </summary>
     private static Icon? LoadTrayIcon()
     {
         try

@@ -254,18 +254,12 @@ public partial class LyricsWindow : Window
             ApplyWindowStyles();
     }
 
-    /// <summary>
-    /// 窗口尺寸是内容撑出来的（SizeToContent="WidthAndHeight"），所以宽度变化必须等布局
-    /// 跑完再处理 —— 在 OverlayWidth 的 PropertyChanged 里读 ActualWidth 拿到的还是旧值。
-    /// </summary>
     private void OnLyricsSizeChanged(SizeChangedEventArgs e)
     {
-        // 首次布局时 PreviousSize 是 0，此时还没有位置可言。
         if (!e.WidthChanged || e.PreviousSize.Width <= 0) return;
 
         if (_viewModel.OverlayPlacement == OverlayPlacement.Custom)
         {
-            // 让中心保持不动，否则拖「歌词宽度」滑条会让歌词整体朝一侧漂移。
             Left -= (e.NewSize.Width - e.PreviousSize.Width) / 2;
             ClampPositionToVirtualScreen(false);
         }

@@ -3,9 +3,6 @@ using System.Text.Json;
 
 namespace FloatSpotify.Playback;
 
-/// <summary>
-/// LRCLIB（lrclib.net）歌词源。免费、无需鉴权，是本项目的默认源。
-/// </summary>
 internal sealed class LrclibLyricsProvider : ILyricsProvider
 {
     private readonly HttpClient _httpClient;
@@ -49,8 +46,6 @@ internal sealed class LrclibLyricsProvider : ILyricsProvider
         if (document.RootElement.TryGetProperty("trackName", out var returnedTitle) && returnedTitle.ValueKind == JsonValueKind.String &&
             !LyricVersionMatch.CandidateMatches(track, returnedTitle.GetString())) return Array.Empty<TimedLyric>();
 
-        // stripCredits 传 false：LRCLIB 的歌词本来就不含署名行，
-        // 保持与重构前完全一致的解析结果。
         var lyrics = LrcParser.Parse(syncedLyrics, duration: duration);
         if ((!lyrics.Any(line => !string.IsNullOrWhiteSpace(line.Text)) || !LyricVersionMatch.TextMatches(track, lyrics)) &&
             document.RootElement.TryGetProperty("plainLyrics", out var plain) && plain.ValueKind == JsonValueKind.String &&
