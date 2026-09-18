@@ -18,7 +18,6 @@ public sealed class AppSettings
     public OverlayPlacement OverlayPlacement { get; set; } = OverlayPlacement.Custom;
     public double Opacity { get; set; } = 0.96;
     public string TextColor { get; set; } = "#FFFFFFFF";
-    public string SecondaryTextColor { get; set; } = "#B8FFFFFF";
     public bool GlowEnabled { get; set; } = true;
     public bool ShowNextLine { get; set; } = true;
     public bool AlwaysOnTop { get; set; } = true;

@@ -13,6 +13,7 @@ internal static class Strings
             ["Tray_ShowLyrics"] = ("显示歌词", "Show lyrics"),
             ["Tray_OpenSettings"] = ("打开设置", "Settings"),
             ["Tray_UnlockLyrics"] = ("解锁歌词", "Unlock lyrics"),
+            ["Tray_RefreshLyrics"] = ("刷新歌词", "Refresh lyrics"),
             ["Tray_ReauthorizeSpotify"] = ("重新授权 Spotify", "Re-authorize Spotify"),
             ["Tray_Exit"] = ("退出", "Exit"),
 
@@ -25,6 +26,7 @@ internal static class Strings
             ["Controls_Previous"] = ("上一首", "Previous track"),
             ["Controls_PlayPause"] = ("播放或暂停", "Play or pause"),
             ["Controls_Next"] = ("下一首", "Next track"),
+            ["Controls_RefreshLyrics"] = ("刷新当前歌词", "Refresh current lyrics"),
             ["Controls_Settings"] = ("设置", "Settings"),
             ["Controls_LockToggle"] = ("锁定或解锁歌词", "Lock or unlock the lyrics"),
             ["Controls_Hide"] = ("隐藏歌词", "Hide the lyrics"),
@@ -118,6 +120,7 @@ internal static class Strings
 
             ["Lyrics_Matching"] = ("正在匹配同步歌词…", "Matching synced lyrics…"),
             ["Lyrics_NotFound_Retrying"] = ("暂未找到歌词，将自动重试", "No lyrics found yet, retrying automatically"),
+            ["Lyrics_Refreshing"] = ("正在刷新歌词…", "Refreshing lyrics…"),
 
             ["Spotify_NeedsAuth"] = ("需要授权", "Authorization required"),
             ["Spotify_ReauthorizeHint"] =

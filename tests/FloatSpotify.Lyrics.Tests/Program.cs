@@ -225,6 +225,11 @@ internal static class Program
         await coordinator.GetAsync("missing", "artist", S(10), default);
         await coordinator.GetAsync("missing", "artist", S(10), default);
         Check(missing.Calls == 1, "Negative cache prevents repeated misses");
+        var revisionBeforeRefresh = coordinator.Revision;
+        coordinator.RequestRefresh();
+        await coordinator.GetAsync("missing", "artist", S(10), default);
+        Check(missing.Calls == 2 && coordinator.Revision == revisionBeforeRefresh + 1,
+            "Manual refresh clears transient misses and invalidates active lyric state");
         coordinator.ApplyConfiguration(Array.Empty<LyricsSource>());
         Check((await coordinator.GetAsync("x", "y", S(10), default)).Count == 0, "All providers disabled");
         coordinator.ApplyConfiguration(new[] { LyricsSource.Karalyr });
@@ -284,15 +289,19 @@ internal static class Program
         using var plainClient = new HttpClient(new FakeHandler(() => new HttpResponseMessage(HttpStatusCode.OK)
         { Content = new StringContent("{\"syncedLyrics\":null,\"plainLyrics\":\"First line\\nSecond line\"}") }));
         var plainResult = await new LrclibLyricsProvider(plainClient, cache).GetAsync("plain", "artist", S(10), default);
-        Check(plainResult[0].IsPlainText && plainResult[0].Text.Contains("Second line") && plainResult[0].Words.Count == 0,
-            "Unsynced lyrics remain available without fabricated timestamps");
+        Check(plainResult.Count == 2 && plainResult.All(line => line.IsEstimatedTiming && !line.IsPlainText) &&
+              plainResult[0].Text == "First line" && plainResult[1].Text == "Second line" &&
+              plainResult[0].At == TimeSpan.Zero && plainResult[1].At == S(5),
+            "Multiline unsynced lyrics use estimated line progression instead of one scrolling block");
+        Check(PlainLyricsParser.Parse("Only one line", S(10))[0].IsPlainText,
+            "Truly single-line unsynced lyrics retain the plain-text fallback");
 
         await cache.WriteAsync(LyricsSource.Karalyr, "track", "artist", words, default, S(10));
         var restored = await cache.TryReadAsync(LyricsSource.Karalyr, "track", "artist", default, S(10));
         Check(restored![0].Words[1] == words[0].Words[1], "Disk cache round-trips word times and text");
         Check(await cache.TryReadAsync(LyricsSource.Karalyr, "track", "artist", default, S(15)) is null, "Duration-separated cache keys");
         Check(await cache.TryReadAsync(LyricsSource.BetterLyrics, "track", "artist", default, S(10)) is null, "Provider-separated cache keys");
-        var cachePath = Directory.GetFiles(directory, "v5-Karalyr-*.json").Single();
+        var cachePath = Directory.GetFiles(directory, "v6-Karalyr-*.json").Single();
         File.SetLastWriteTimeUtc(cachePath, DateTime.UtcNow.AddDays(-8));
         Check(await cache.TryReadAsync(LyricsSource.Karalyr, "track", "artist", default, S(10)) is null, "Expired cache refreshes");
         await File.WriteAllTextAsync(cachePath, "broken json");
@@ -575,6 +584,13 @@ internal static class Program
 
     private static void PlaybackAvailabilityTest()
     {
+        Check(SpotifyPlaybackEngine.NetworkRetryDelay(1) == S(5) &&
+              SpotifyPlaybackEngine.NetworkRetryDelay(2) == S(10) &&
+              SpotifyPlaybackEngine.NetworkRetryDelay(3) == S(20) &&
+              SpotifyPlaybackEngine.NetworkRetryDelay(4) == S(30) &&
+              SpotifyPlaybackEngine.NetworkRetryDelay(20) == S(30),
+            "Spotify network polling backs off from five seconds and caps at thirty seconds");
+
         // Exercise the actual Spotify frame path without authenticating or polling a player.
         using var engine = new SpotifyPlaybackEngine(() => null, new LyricsCoordinator(Array.Empty<ILyricsProvider>()));
         var type = typeof(SpotifyPlaybackEngine);
@@ -594,6 +610,10 @@ internal static class Program
         Set("_lyricsTask", Task.FromException<IReadOnlyList<TimedLyric>>(new HttpRequestException("fixture")));
         type.GetMethod("ObserveLyricsTask", flags)!.Invoke(engine, null);
         Check(Frame().CurrentLine == "Available lyric", "Spotify retains displayed lyrics when enrichment task faults");
+        Set("_lastSuccessfulPollAt", DateTimeOffset.UtcNow.Subtract(S(16)));
+        type.GetMethod("RecordPlaybackPollFailure", flags)!.Invoke(engine, null);
+        Check(Frame().Track == "Spotify" && Frame().ActiveLyric is null,
+            "Spotify drops stale lyrics after a sustained network outage");
     }
 
     private static void RenderTests(string directory)

@@ -149,6 +149,10 @@
                             ToolTip="{loc:Tr Controls_Next}"
                             Click="NextButton_Click" />
                     <Button Style="{StaticResource IconButton}"
+                            Content="↻"
+                            ToolTip="{loc:Tr Controls_RefreshLyrics}"
+                            Click="RefreshLyricsButton_Click" />
+                    <Button Style="{StaticResource IconButton}"
                             Content="⚙"
                             ToolTip="{loc:Tr Controls_Settings}"
                             Click="SettingsButton_Click" />

@@ -7,7 +7,7 @@ namespace FloatSpotify.Playback;
 
 internal sealed class LyricsCache
 {
-    private const string CacheVersion = "v5";
+    private const string CacheVersion = "v6";
 
     private readonly string _cacheDirectory;
 

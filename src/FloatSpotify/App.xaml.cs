@@ -115,6 +115,7 @@ public partial class App : System.Windows.Application
         menu.Items.Add(Loc.T("Tray_ShowLyrics"), null, (_, _) => Instance?.ShowOverlay());
         menu.Items.Add(Loc.T("Tray_OpenSettings"), null, (_, _) => Instance?.ShowSettings());
         menu.Items.Add(Loc.T("Tray_UnlockLyrics"), null, (_, _) => Instance?.UnlockOverlay());
+        menu.Items.Add(Loc.T("Tray_RefreshLyrics"), null, (_, _) => Instance?.RefreshLyrics());
         menu.Items.Add(Loc.T("Tray_ReauthorizeSpotify"), null, (_, _) => Instance?.ReauthorizeSpotify());
         menu.Items.Add(new Forms.ToolStripSeparator());
         menu.Items.Add(Loc.T("Tray_Exit"), null, (_, _) => Instance?.ExitApplication());
@@ -177,6 +178,14 @@ public partial class App : System.Windows.Application
     {
         _viewModel?.Unlock();
         _lyricsWindow?.ShowOverlay();
+    }
+
+    private async void RefreshLyrics()
+    {
+        if (_viewModel is null) return;
+
+        _lyricsWindow?.ShowOverlay();
+        await _viewModel.RefreshLyricsAsync();
     }
 
     private async void ReauthorizeSpotify()

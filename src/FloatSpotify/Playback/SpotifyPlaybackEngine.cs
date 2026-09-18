@@ -12,7 +12,9 @@ namespace FloatSpotify.Playback;
 public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
 {
     private const string PlayerBase = "https://api.spotify.com/v1/me/player";
-    private static readonly TimeSpan PlaybackPollInterval = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan PlaybackPollInterval = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan StalePlaybackTimeout = TimeSpan.FromSeconds(15);
+    private static readonly TimeSpan MaximumNetworkRetryDelay = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan DefaultRateLimitDelay = TimeSpan.FromSeconds(30);
     private static readonly TimeSpan MaximumRateLimitDelay = TimeSpan.FromDays(7);
 
@@ -29,11 +31,14 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
     private PlaybackSnapshot? _snapshot;
     private IReadOnlyList<TimedLyric> _lyrics = Array.Empty<TimedLyric>();
     private Task<IReadOnlyList<TimedLyric>>? _lyricsTask;
+    private CancellationTokenSource? _lyricsCancellation;
     private string? _lyricsTrackId;
     private int _lyricsRevision;
     private long _lyricsRequestId;
     private DateTimeOffset _nextLyricsRetryAt;
     private DateTimeOffset _nextPollAt = DateTimeOffset.MinValue;
+    private DateTimeOffset _lastSuccessfulPollAt = DateTimeOffset.MinValue;
+    private int _consecutivePollFailures;
     private DateTimeOffset _rateLimitUntil = DateTimeOffset.MinValue;
     private string? _rateLimitClientId;
     private string? _authErrorKey;
@@ -99,6 +104,26 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
                 _authErrorKey = null;
                 _reauthorizationInProgress = true;
                 _accessTokenTask = _authClient.ForceAuthorizationAsync(cancellationToken);
+            }
+            return;
+        }
+
+        if (command == PlayerCommand.RefreshLyrics)
+        {
+            _lyricsCoordinator.RequestRefresh();
+            lock (_stateGate)
+            {
+                _lyricsCancellation?.Cancel();
+                _lyricsCancellation?.Dispose();
+                _lyricsCancellation = null;
+                _lyricsTask = null;
+                _lyrics = Array.Empty<TimedLyric>();
+                _lyricsTrackId = null;
+                _lyricsRequestId++;
+                _nextLyricsRetryAt = DateTimeOffset.MinValue;
+                _nextPollAt = DateTimeOffset.MinValue;
+                _statusMessage = Loc.T("Lyrics_Refreshing");
+                _statusMessageUntil = DateTimeOffset.UtcNow.AddSeconds(4);
             }
             return;
         }
@@ -181,6 +206,8 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
             return;
 
         _disposed = true;
+        _lyricsCancellation?.Cancel();
+        _lyricsCancellation?.Dispose();
         _requestGate.Dispose();
         _httpClient.Dispose();
     }
@@ -279,6 +306,7 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
 
             if (response.StatusCode == HttpStatusCode.NoContent)
             {
+                RecordPlaybackPollSuccess();
                 lock (_stateGate)
                     _snapshot = null;
                 return;
@@ -292,11 +320,14 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
 
             if (!response.IsSuccessStatusCode)
             {
+                RecordPlaybackPollFailure();
                 SetStatusMessage(
                     Loc.F("Spotify_Status_StateFailed", (int)response.StatusCode),
                     TimeSpan.FromSeconds(4));
                 return;
             }
+
+            RecordPlaybackPollSuccess();
 
             using var document = JsonDocument.Parse(
                 await response.Content.ReadAsStreamAsync(cancellationToken));
@@ -347,6 +378,9 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
 
                 if (trackChanged || (_lyricsTask is null && _lyrics.Count == 0 && DateTimeOffset.UtcNow >= _nextLyricsRetryAt))
                 {
+                    _lyricsCancellation?.Cancel();
+                    _lyricsCancellation?.Dispose();
+                    _lyricsCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     _lyrics = Array.Empty<TimedLyric>();
                     _lyricsTrackId = snapshot.Id;
                     _lyricsRevision = lyricsRevision;
@@ -356,7 +390,7 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
                         snapshot.Track,
                         snapshot.Artist,
                         snapshot.Duration,
-                        cancellationToken,
+                        _lyricsCancellation.Token,
                         available =>
                         {
                             lock (_stateGate)
@@ -371,6 +405,7 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
         }
         catch (HttpRequestException)
         {
+            RecordPlaybackPollFailure();
             SetStatusMessage(Loc.T("Spotify_Status_NetworkRetry"), TimeSpan.FromSeconds(4));
         }
         catch (SpotifyAuthorizationException exception)
@@ -384,6 +419,7 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
         }
         catch (JsonException)
         {
+            RecordPlaybackPollFailure();
             SetStatusMessage(Loc.T("Spotify_Status_UnknownState"), TimeSpan.FromSeconds(4));
         }
         finally
@@ -414,6 +450,8 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
                 ? task.Result
                 : _lyrics;
             _lyricsTask = null;
+            _lyricsCancellation?.Dispose();
+            _lyricsCancellation = null;
         }
     }
 
@@ -576,6 +614,47 @@ public sealed class SpotifyPlaybackEngine : IPlaybackEngine, IDisposable
     {
         lock (_stateGate)
             return DateTimeOffset.UtcNow < _rateLimitUntil;
+    }
+
+    private void RecordPlaybackPollSuccess()
+    {
+        lock (_stateGate)
+        {
+            _lastSuccessfulPollAt = DateTimeOffset.UtcNow;
+            _consecutivePollFailures = 0;
+        }
+    }
+
+    private void RecordPlaybackPollFailure()
+    {
+        lock (_stateGate)
+        {
+            var now = DateTimeOffset.UtcNow;
+            _consecutivePollFailures++;
+            var retryAt = now.Add(NetworkRetryDelay(_consecutivePollFailures));
+            if (_nextPollAt < retryAt)
+                _nextPollAt = retryAt;
+
+            if (_snapshot is null || _lastSuccessfulPollAt == DateTimeOffset.MinValue ||
+                now - _lastSuccessfulPollAt < StalePlaybackTimeout)
+                return;
+
+            _lyricsCancellation?.Cancel();
+            _lyricsCancellation?.Dispose();
+            _lyricsCancellation = null;
+            _lyricsTask = null;
+            _lyrics = Array.Empty<TimedLyric>();
+            _lyricsTrackId = null;
+            _lyricsRequestId++;
+            _snapshot = null;
+        }
+    }
+
+    internal static TimeSpan NetworkRetryDelay(int consecutiveFailures)
+    {
+        var exponent = Math.Clamp(consecutiveFailures - 1, 0, 3);
+        var seconds = PlaybackPollInterval.TotalSeconds * (1 << exponent);
+        return TimeSpan.FromSeconds(Math.Min(seconds, MaximumNetworkRetryDelay.TotalSeconds));
     }
 
     private void ApplyRateLimit(HttpResponseMessage response)

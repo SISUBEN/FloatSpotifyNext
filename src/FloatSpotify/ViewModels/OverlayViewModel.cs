@@ -306,18 +306,6 @@ public sealed class OverlayViewModel : ObservableObject
         set => SetTextRgb(blue: NormalizeColorChannel(value));
     }
 
-    public string SecondaryTextColor
-    {
-        get => _settings.SecondaryTextColor;
-        set
-        {
-            if (_settings.SecondaryTextColor == value) return;
-            _settings.SecondaryTextColor = value;
-            OnPropertyChanged();
-            PersistSettings();
-        }
-    }
-
     public bool GlowEnabled
     {
         get => _settings.GlowEnabled;
@@ -424,6 +412,9 @@ public sealed class OverlayViewModel : ObservableObject
     public Task NextTrackAsync() =>
         _playbackEngine.ExecuteAsync(PlayerCommand.NextTrack);
 
+    public Task RefreshLyricsAsync() =>
+        _playbackEngine.ExecuteAsync(PlayerCommand.RefreshLyrics);
+
     public Task ReauthorizeSpotifyAsync() =>
         _playbackEngine.ExecuteAsync(PlayerCommand.Reauthorize);
 
@@ -461,7 +452,6 @@ public sealed class OverlayViewModel : ObservableObject
 
         rgb = rgb.ToUpperInvariant();
         TextColor = $"#FF{rgb}";
-        SecondaryTextColor = $"#B8{rgb}";
     }
 
     public void ResetLyricOffset()

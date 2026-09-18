@@ -66,10 +66,11 @@ Go to [Releases](https://github.com/SISUBEN/FloatSpotifyNext/releases/latest) an
 | Action | Effect |
 | :--- | :--- |
 | Click the lyrics | Open or collapse the control bar |
+| Click ↻ or tray “Refresh lyrics” | Cancel a stuck lookup and immediately fetch the current lyrics again |
 | Drag the lyrics | Move the overlay |
 | Adjust "Lyric width" | Set the overlay width between 160 and 1600 px |
 | Click lock | Enable click-through so it never blocks anything |
-| Right-click the tray icon | Show lyrics, open settings, unlock, re-authorize or exit |
+| Right-click the tray icon | Show lyrics, refresh lyrics, open settings, unlock, re-authorize or exit |
 
 ## Spotify setup
 
@@ -124,13 +125,14 @@ flowchart LR
 <summary><strong>How lyrics are fetched, matched and degraded</strong></summary>
 
 - Enabled basic sources (LRCLIB / optional NetEase) return usable lyrics first, then the Karalyr / Better Lyrics enhancement sources try to upgrade them to word-level results. Sources of the same class follow the user's ordering; nothing is requested when all of them are off.
+- Spotify playback-state requests are serialized and polled every 5 seconds. Network failures back off exponentially up to 30 seconds; state older than 15 seconds is hidden and the current track is synchronized again after connectivity returns.
 - Tracks explicitly marked English / Chinese / Japanese / Korean Ver. have both the returned title and the lyric script checked, so a wrong language cannot overwrite a correct result that merely has a lower sync level. The full version title takes part in the cache key.
 - Each source has a 3 second timeout by default. `404`, `401`, empty results, network failures and parse errors are isolated; `429` respects `Retry-After` and enters a short cooldown.
 - When the current song has no lyrics it is rechecked every 30 seconds, subject to the rate-limit cooldown and a 5 minute miss cache.
 - Word-level results are cached for 7 days, line-level results for 1 day. The cache is keyed by source, artist, title and duration.
 - When Enhanced LRC is missing the end time of the last word, the next line or the end of the song is used as the boundary; if no boundary is available it falls back to line level rather than inventing an average word duration.
 - TTML supports absolute clocks, grouped `begin` / `end` and nested word-level `span`, and preserves whitespace. Background vocals and translations never leak into the lead line.
-- Unsynced lyrics are still shown as scrollable plain text; with no text at all the app shows the song information and an automatic retry hint.
+- Multiline unsynced lyrics are split into an estimated line progression instead of one scrolling text block. Truly single-line text remains scrollable; with no text at all the app shows the song information and an automatic retry hint.
 
 Lyric format and API references: [Karalyr docs](https://www.karalyr.com/docs), [Better Lyrics response format](https://lyrics-api-docs.boidu.dev/docs/response-format/), [Better Lyrics authentication](https://lyrics-api-docs.boidu.dev/docs/authentication/). Actual word-level coverage depends on the upstream services.
 

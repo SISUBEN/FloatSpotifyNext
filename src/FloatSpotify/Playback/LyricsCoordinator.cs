@@ -69,6 +69,16 @@ public sealed class LyricsCoordinator
         }
     }
 
+    public void RequestRefresh()
+    {
+        lock (_gate)
+        {
+            _misses.Clear();
+            _cooldowns.Clear();
+            _revision++;
+        }
+    }
+
     public async Task<IReadOnlyList<TimedLyric>> GetAsync(
         string track,
         string artist,
@@ -151,7 +161,7 @@ public sealed class LyricsCoordinator
             state.BestMilliseconds = result.Attempt.Milliseconds;
             onAvailable?.Invoke(state.Best);
 
-            if (quality >= 2)
+            if (quality >= 3)
                 break;
 
             if (!remaining.Any(racer => racer.IsEnhancement))
@@ -284,8 +294,9 @@ public sealed class LyricsCoordinator
     };
 
     private static int Quality(IReadOnlyList<TimedLyric> lyrics) =>
-        lyrics.Any(line => line.Words.Count > 0) ? 2
-        : lyrics.Any(line => !line.IsPlainText && !string.IsNullOrWhiteSpace(line.Text)) ? 1 : 0;
+        lyrics.Any(line => line.Words.Count > 0) ? 3
+        : lyrics.Any(line => !line.IsPlainText && !line.IsEstimatedTiming && !string.IsNullOrWhiteSpace(line.Text)) ? 2
+        : lyrics.Any(line => line.IsEstimatedTiming && !string.IsNullOrWhiteSpace(line.Text)) ? 1 : 0;
 
     private static int WordLines(IReadOnlyList<TimedLyric> lyrics) =>
         lyrics.Count(line => line.Words.Count > 0);

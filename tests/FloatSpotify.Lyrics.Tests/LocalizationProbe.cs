@@ -40,6 +40,12 @@ internal static class LocalizationProbe
 
         var lyricsWindow = new LyricsWindow(vm);
         Show(lyricsWindow);
+        vm.SetTextColor("#FFFF0000");
+        var nextLyric = (TextBlock)lyricsWindow.FindName("NextLyricText");
+        Check(nextLyric.Foreground is SolidColorBrush { Color: var nextColor } &&
+              nextColor == Color.FromRgb(255, 0, 0) && Math.Abs(nextLyric.Opacity - 0.32) < 0.001,
+            "next lyric uses the active lyric's unsung color and opacity");
+        vm.SetTextColor("#FFFFFFFF");
 
         var controls = new ControlsWindow(vm, lyricsWindow);
         Show(controls);

@@ -184,8 +184,9 @@ internal static class LyricsDiagnostics
 
     private static string QualityName(int quality) => quality switch
     {
-        >= 2 => "word",
-        1 => "line",
+        >= 3 => "word",
+        2 => "line",
+        1 => "estimated-line",
         _ => "plain"
     };
 

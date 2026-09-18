@@ -50,7 +50,7 @@ internal sealed class LrclibLyricsProvider : ILyricsProvider
         if ((!lyrics.Any(line => !string.IsNullOrWhiteSpace(line.Text)) || !LyricVersionMatch.TextMatches(track, lyrics)) &&
             document.RootElement.TryGetProperty("plainLyrics", out var plain) && plain.ValueKind == JsonValueKind.String &&
             !string.IsNullOrWhiteSpace(plain.GetString()))
-            lyrics = new[] { new TimedLyric(TimeSpan.Zero, plain.GetString()!) { IsPlainText = true } };
+            lyrics = PlainLyricsParser.Parse(plain.GetString(), duration);
         if (!LyricVersionMatch.TextMatches(track, lyrics)) return Array.Empty<TimedLyric>();
         if (lyrics.Count > 0)
             await _cache.WriteAsync(Source, track, artist, lyrics, cancellationToken, duration);

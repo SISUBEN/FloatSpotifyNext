@@ -93,6 +93,11 @@ public partial class ControlsWindow : Window
         await _viewModel.NextTrackAsync();
     }
 
+    private async void RefreshLyricsButton_Click(object sender, RoutedEventArgs e)
+    {
+        await _viewModel.RefreshLyricsAsync();
+    }
+
     private void SettingsButton_Click(object sender, RoutedEventArgs e)
     {
         _viewModel.IsSettingsOpen = !_viewModel.IsSettingsOpen;

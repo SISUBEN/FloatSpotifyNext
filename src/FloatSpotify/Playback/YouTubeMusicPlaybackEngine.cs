@@ -20,6 +20,7 @@ public sealed class YouTubeMusicPlaybackEngine : IPlaybackEngine, IDisposable
     private PlaybackSnapshot? _snapshot;
     private IReadOnlyList<TimedLyric> _lyrics = Array.Empty<TimedLyric>();
     private Task<IReadOnlyList<TimedLyric>>? _lyricsTask;
+    private CancellationTokenSource? _lyricsCancellation;
     private string? _lyricsTrackId;
     private int _lyricsRevision;
     private long _lyricsRequestId;
@@ -83,6 +84,26 @@ public sealed class YouTubeMusicPlaybackEngine : IPlaybackEngine, IDisposable
         if (command == PlayerCommand.Reauthorize)
             return;
 
+        if (command == PlayerCommand.RefreshLyrics)
+        {
+            _lyricsCoordinator.RequestRefresh();
+            lock (_stateGate)
+            {
+                _lyricsCancellation?.Cancel();
+                _lyricsCancellation?.Dispose();
+                _lyricsCancellation = null;
+                _lyricsTask = null;
+                _lyrics = Array.Empty<TimedLyric>();
+                _lyricsTrackId = null;
+                _lyricsRequestId++;
+                _nextLyricsRetryAt = DateTimeOffset.MinValue;
+                _nextPollAt = DateTimeOffset.MinValue;
+                _statusMessage = Loc.T("Lyrics_Refreshing");
+                _statusMessageUntil = DateTimeOffset.UtcNow.AddSeconds(4);
+            }
+            return;
+        }
+
         var session = await GetSessionForCommandAsync(cancellationToken);
         if (session is null)
         {
@@ -119,6 +140,8 @@ public sealed class YouTubeMusicPlaybackEngine : IPlaybackEngine, IDisposable
             return;
 
         _disposed = true;
+        _lyricsCancellation?.Cancel();
+        _lyricsCancellation?.Dispose();
         _httpClient.Dispose();
     }
 
@@ -236,6 +259,9 @@ public sealed class YouTubeMusicPlaybackEngine : IPlaybackEngine, IDisposable
 
                 if (trackChanged || (_lyricsTask is null && _lyrics.Count == 0 && DateTimeOffset.UtcNow >= _nextLyricsRetryAt))
                 {
+                    _lyricsCancellation?.Cancel();
+                    _lyricsCancellation?.Dispose();
+                    _lyricsCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
                     _lyrics = Array.Empty<TimedLyric>();
                     _lyricsTrackId = snapshot.Id;
                     _lyricsRevision = lyricsRevision;
@@ -245,7 +271,7 @@ public sealed class YouTubeMusicPlaybackEngine : IPlaybackEngine, IDisposable
                         snapshot.Track,
                         snapshot.Artist,
                         snapshot.Duration,
-                        cancellationToken,
+                        _lyricsCancellation.Token,
                         available =>
                         {
                             lock (_stateGate)
@@ -380,6 +406,8 @@ public sealed class YouTubeMusicPlaybackEngine : IPlaybackEngine, IDisposable
                 ? task.Result
                 : _lyrics;
             _lyricsTask = null;
+            _lyricsCancellation?.Dispose();
+            _lyricsCancellation = null;
         }
     }
 
