@@ -127,6 +127,12 @@ internal static class Program
         Check(LrcParser.Parse("[00:01]<00:02>B<00:01>A", duration: S(5))[0].Words.Count == 0, "Nonmonotonic LRC degrades");
         Check(LrcParser.Parse("[00:01]plain words")[0].Words.Count == 0, "Line lyrics never fabricate words");
         Check(LrcParser.Parse("[00:01]作词：名字\n[00:02]曲终人散", true).Count == 1, "Legacy credits filter retained");
+        var bilingualCredits = LrcParser.Parse(
+            "[00:00]制作人 Producer：甲\n[00:01]制谱 Music Copyist：乙\n" +
+            "[00:02]电贝司 Electric bass：丙\n[00:03]母带制作 Mastering Engineer：丁\n" +
+            "[00:10]First sung line", stripCredits: true);
+        Check(bilingualCredits.Count == 1 && bilingualCredits[0].At == S(10),
+            "Bilingual production credits do not enter the lyric timeline");
         var ttml = "<tt xmlns='http://www.w3.org/ns/ttml'><body><div><p begin='00:00:01.000' end='0:04'><span begin='1s' end='2s'>Hello</span> <span begin='2000ms' end='3s'>世</span><span begin='3' end='4'>界</span></p></div></body></tt>";
         var line = TtmlParser.Parse(ttml).Single();
         Check(line.Text == "Hello 世界" && line.Words[0].Text == "Hello " && line.Words.Count == 3, "TTML mixed language and inter-span whitespace");
@@ -153,6 +159,11 @@ internal static class Program
         Check(!LyricVersionMatch.CandidateMatches("Side Quest King - Chinese Ver.", "Side Quest King (English Ver.)"), "Explicit language versions are not interchangeable");
         Check(LyricVersionMatch.CandidateMatches("Side Quest King - English Ver.", "Side Quest King (English Version)"), "Equivalent language version labels accepted");
         Check(LyricVersionMatch.Language("Englishman in New York") is null, "Ordinary song titles do not imply a language version");
+        Check(!LyricVersionMatch.CandidateMatches("Beyond This Station", "下一站 Beyond This Station（伴奏）") &&
+              !LyricVersionMatch.CandidateMatches("Beyond This Station", "Beyond This Station (Harmonic Accompaniment)") &&
+              !LyricVersionMatch.CandidateMatches("Beyond This Station (Instrumental)", "Beyond This Station") &&
+              LyricVersionMatch.CandidateMatches("Beyond This Station", "下一站 Beyond This Station"),
+            "Vocal and instrumental recordings are not interchangeable");
 
         var krc = KrcParser.Parse("[1000,2000]<0,300,0>Hello <300,300,0>world\n[4000,1000]<0,500,0>Next");
         Check(krc.Count == 2 && krc[0].Text == "Hello world" && krc[0].Words.Count == 2 &&
@@ -197,6 +208,11 @@ internal static class Program
             "Kugou filename with extra separators still matches");
         Check(KugouLyricsProvider.ScoreFilename("陈奕迅 - 十年", 200, "晴天", "周杰伦", S(269)) == 0,
             "Kugou unrelated filename scores zero");
+        Check(KugouLyricsProvider.ScoreFilename("HOYO-MiX - 下一站 Beyond This Station（伴奏）", 229,
+                  "Beyond This Station", "HOYO-MiX", S(229)) == 0 &&
+              LyricsMatchScore.Score("下一站 Beyond This Station（伴奏）", "HOYO-MiX", 229,
+                  "Beyond This Station", "HOYO-MiX", S(229)) == 0,
+            "Same-duration accompaniment cannot win the vocal track search");
     }
 
     private static async Task ProviderTests()
@@ -430,6 +446,36 @@ internal static class Program
                 : Json("{\"candidates\":[]}")));
         Check((await new KugouLyricsProvider(searchOnlyClient, rejectCache).GetAsync("晴天", "周杰伦", S(269), default)).Count == 0,
             "Kugou rejects an unrelated search hit instead of fetching wrong lyrics");
+
+        var vocalCache = new LyricsCache(Path.Combine(Path.GetTempPath(), "FloatSpotify-tests-" + Guid.NewGuid().ToString("N")));
+        using var vocalClient = new HttpClient(new RoutingHandler(request =>
+        {
+            var url = request.RequestUri!.ToString();
+            if (url.Contains("mobileservice.kugou.com"))
+                return Json("<!--KG_TAG_RES_START-->" + JsonSerializer.Serialize(new
+                {
+                    data = new { info = new[]
+                    {
+                        new { filename = "HOYO-MiX - 下一站 Beyond This Station（伴奏）", duration = 229, hash = "INSTRUMENTAL" },
+                        new { filename = "小林未郁/HOYO-MiX - 下一站 Beyond This Station", duration = 229, hash = "VOCAL" }
+                    } }
+                }) + "<!--KG_TAG_RES_END-->");
+            if (url.Contains("krcs.kugou.com"))
+            {
+                Check(url.Contains("hash=VOCAL"), "Kugou searches the vocal hash, not the accompaniment");
+                return Json(JsonSerializer.Serialize(new { candidates = new[]
+                {
+                    new { id = 1, accesskey = "A", song = "下一站 Beyond This Station（伴奏）", singer = "HOYO-MiX", duration = 229000 },
+                    new { id = 2, accesskey = "B", song = "下一站 Beyond This Station", singer = "小林未郁/HOYO-MiX", duration = 229000 }
+                } }));
+            }
+            Check(url.Contains("id=2"), "Kugou downloads the vocal candidate");
+            return Json(JsonSerializer.Serialize(new { content = KrcFixture("[10000,1000]<0,500,0>First <500,500,0>line") }));
+        }));
+        var vocal = await new KugouLyricsProvider(vocalClient, vocalCache).GetAsync(
+            "Beyond This Station", "HOYO-MiX", S(229), default);
+        Check(vocal.Count == 1 && vocal[0].At == S(10) && vocal[0].Words.Count == 2,
+            "Vocal KRC replaces a same-duration accompaniment search hit");
     }
 
     private static async Task DiagnosticsTests()
@@ -540,6 +586,7 @@ internal static class Program
 
         foreach (var (track, artist, seconds) in new[]
         {
+            ("Beyond This Station", "HOYO-MiX", 229),
             ("晴天", "周杰伦", 269),
             ("Good Time", "Owl City", 205),
             ("Yesterday", "The Beatles", 125)

@@ -17,10 +17,10 @@ internal static class LrcParser
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
     private static readonly Regex CreditPattern = new(
-        @"^\s*(作词|作曲|编曲|作词人|作曲人|制作人|出品人|监制|统筹|企划|宣传|发行|出品|制作|" +
-        @"录音|录音师|录音室|混音|混音师|母带|母带工程师|母带处理|" +
-        @"吉他|贝斯|鼓|键盘|弦乐|和声|配唱|人声|美术|设计|" +
-        @"词曲|词|曲|OP|SP)\s*[:：]",
+        @"^\s*(作词|作曲|编曲|作词人|作曲人|制作人|出品人|监制|统筹|企划|宣传|发行|出品|制作|制谱|" +
+        @"人声录音棚|人声录音师|乐器录音棚|乐器录音师|录音|录音师|录音室|混音|混音师|母带|母带制作|母带工程师|母带处理|" +
+        @"电吉他|电贝司|架子鼓|吉他|贝斯|鼓|键盘|弦乐|和声|配唱|人声|美术|设计|" +
+        @"词曲|词|曲|OP|SP)(?:\s+[A-Za-z][A-Za-z ]{0,40})?\s*[:：]",
         RegexOptions.Compiled | RegexOptions.CultureInvariant | RegexOptions.IgnoreCase);
 
     public static bool IsCreditLine(string? text) =>

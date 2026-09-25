@@ -8,6 +8,10 @@ internal static class LyricVersionMatch
         @"(?<!\p{L})(?<language>English|Chinese|Mandarin|Cantonese|Japanese|Korean|EN|ZH|JP|JA|KO)\s*ver(?:sion)?\.?(?!\p{L})|(?<language>中文|国语|國語|粤语|粵語|英文|英语|英語|日语|日語|韩语|韓語)版",
         RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
 
+    private static readonly Regex Instrumental = new(
+        @"伴奏|纯音乐|純音樂|instrumental|accompaniment|karaoke|off[\s-]?vocal|backing[\s-]?track",
+        RegexOptions.IgnoreCase | RegexOptions.CultureInvariant);
+
     internal static string? Language(string? title)
     {
         if (string.IsNullOrWhiteSpace(title)) return null;
@@ -25,6 +29,8 @@ internal static class LyricVersionMatch
 
     public static bool CandidateMatches(string requested, string? returned)
     {
+        if (Instrumental.IsMatch(requested) != Instrumental.IsMatch(returned ?? string.Empty))
+            return false;
         var expected = Language(requested);
         var candidate = Language(returned);
         return expected is null || candidate is null || expected == candidate;
