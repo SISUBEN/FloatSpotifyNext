@@ -19,6 +19,7 @@ public sealed class LyricsCoordinator
     private readonly IReadOnlyDictionary<LyricsSource, ILyricsProvider> _providers;
 
     private ILyricsProvider[] _activeChain = Array.Empty<ILyricsProvider>();
+    private bool _waitForTranslations;
     private int _revision;
     private readonly Dictionary<LyricsSource, DateTimeOffset> _cooldowns = new();
     private readonly Dictionary<(LyricsSource, string, string, long), DateTimeOffset> _misses = new();
@@ -51,7 +52,11 @@ public sealed class LyricsCoordinator
         }
     }
 
-    public void ApplyConfiguration(IReadOnlyList<LyricsSource> orderedEnabledSources)
+    /// <param name="waitForTranslations">
+    /// Keep racing translation-capable sources after the best original lyrics arrive, so their
+    /// translation lane can be attached. Display is never held back by this wait.
+    /// </param>
+    public void ApplyConfiguration(IReadOnlyList<LyricsSource> orderedEnabledSources, bool waitForTranslations = false)
     {
         lock (_gate)
         {
@@ -61,10 +66,11 @@ public sealed class LyricsCoordinator
                 .Select(source => _providers[source])
                 .ToArray();
 
-            if (chain.SequenceEqual(_activeChain))
+            if (chain.SequenceEqual(_activeChain) && waitForTranslations == _waitForTranslations)
                 return;
 
             _activeChain = chain;
+            _waitForTranslations = waitForTranslations;
             _revision++;
         }
     }
@@ -87,8 +93,12 @@ public sealed class LyricsCoordinator
         Action<IReadOnlyList<TimedLyric>>? onAvailable = null)
     {
         ILyricsProvider[] chain;
+        bool waitForTranslations;
         lock (_gate)
+        {
             chain = _activeChain;
+            waitForTranslations = _waitForTranslations;
+        }
 
         if (chain.Length == 0)
             return Array.Empty<TimedLyric>();
@@ -97,7 +107,7 @@ public sealed class LyricsCoordinator
 
         var watch = System.Diagnostics.Stopwatch.StartNew();
         var state = new RaceState();
-        await RaceAsync(chain, track, artist, duration, cancellationToken, onAvailable, state);
+        await RaceAsync(chain, track, artist, duration, cancellationToken, onAvailable, state, waitForTranslations);
         watch.Stop();
 
         LyricsDiagnostics.Write(new LyricsFetchReport(
@@ -120,7 +130,8 @@ public sealed class LyricsCoordinator
         TimeSpan duration,
         CancellationToken cancellationToken,
         Action<IReadOnlyList<TimedLyric>>? onAvailable,
-        RaceState state)
+        RaceState state,
+        bool waitForTranslations)
     {
         var remaining = new List<Racer>();
         foreach (var provider in providers)
@@ -152,19 +163,35 @@ public sealed class LyricsCoordinator
                 continue;
 
             var quality = Quality(lyrics);
+            var carriesTranslation = LyricTranslations.Any(lyrics);
             if (state.Best is not null && quality <= state.BestQuality)
-                continue;
+            {
+                // A lower-quality source may still contribute the translation lane.
+                if (!carriesTranslation || LyricTranslations.Any(state.Best) ||
+                    LyricTranslations.Attach(state.Best, lyrics, line => line.Translation) is not { } merged)
+                    continue;
 
-            state.Best = lyrics;
-            state.BestQuality = quality;
-            state.BestSource = result.Attempt.Source;
-            state.BestMilliseconds = result.Attempt.Milliseconds;
-            onAvailable?.Invoke(state.Best);
+                state.Best = merged;
+                onAvailable?.Invoke(state.Best);
+            }
+            else
+            {
+                state.Best = !carriesTranslation && state.TranslationDonor is not null
+                    ? LyricTranslations.Attach(lyrics, state.TranslationDonor, line => line.Translation) ?? lyrics
+                    : lyrics;
+                state.BestQuality = quality;
+                state.BestSource = result.Attempt.Source;
+                state.BestMilliseconds = result.Attempt.Milliseconds;
+                onAvailable?.Invoke(state.Best);
+            }
 
-            if (quality >= 3)
-                break;
+            if (carriesTranslation)
+                state.TranslationDonor ??= lyrics;
 
-            if (!remaining.Any(racer => racer.IsEnhancement))
+            var upgradePending = state.BestQuality < 3 && remaining.Any(racer => racer.IsEnhancement);
+            var translationPending = waitForTranslations && !LyricTranslations.Any(state.Best) &&
+                                     remaining.Any(racer => MayTranslate(racer.Source));
+            if (!upgradePending && !translationPending)
                 break;
         }
 
@@ -283,6 +310,10 @@ public sealed class LyricsCoordinator
         LyricsSource source, string track, string artist, TimeSpan duration) =>
         (source, track, artist, (long)Math.Round(duration.TotalSeconds));
 
+    // Sources whose payloads routinely include a translation lane.
+    private static bool MayTranslate(LyricsSource source) =>
+        source is LyricsSource.NetEase or LyricsSource.Kugou;
+
     private static bool IsEnhancement(LyricsSource source) =>
         source is LyricsSource.Karalyr or LyricsSource.BetterLyrics or LyricsSource.Kugou;
 
@@ -314,6 +345,7 @@ public sealed class LyricsCoordinator
         public int BestQuality { get; set; }
         public LyricsSource? BestSource { get; set; }
         public long BestMilliseconds { get; set; }
+        public IReadOnlyList<TimedLyric>? TranslationDonor { get; set; }
 
         public List<LyricsAttempt> Attempts { get; } = new();
     }

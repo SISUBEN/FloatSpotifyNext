@@ -55,6 +55,13 @@ internal static class Strings
                  "usable result wins; once word-level lyrics arrive the rest are dropped. With all sources " +
                  "off, no lyrics are fetched."),
             ["Controls_ShowNextLine"] = ("下一句", "Next line"),
+            ["Controls_ShowTranslation"] = ("双语歌词", "Bilingual lyrics"),
+            ["Controls_ShowTranslation_Tooltip"] =
+                ("在原文下方显示翻译。译文来自网易云音乐、酷狗等歌词源，需在上方启用；" +
+                 "其他源的逐字歌词也会自动对齐并附上译文。",
+                 "Show a translation beneath each line. Translations come from sources such as NetEase " +
+                 "and Kugou, which must be enabled above; they are aligned onto word-level lyrics from " +
+                 "other sources automatically."),
             ["Controls_Glow"] = ("描边阴影", "Outline shadow"),
             ["Controls_AlwaysOnTop"] = ("始终置顶", "Always on top"),
             ["Controls_Authorize"] =

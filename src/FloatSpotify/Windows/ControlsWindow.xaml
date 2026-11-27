@@ -545,6 +545,11 @@
                               IsChecked="{Binding ShowNextLine, Mode=TwoWay}" />
                     <CheckBox Margin="0,0,18,4"
                               Foreground="#E6FFFFFF"
+                              Content="{loc:Tr Controls_ShowTranslation}"
+                              ToolTip="{loc:Tr Controls_ShowTranslation_Tooltip}"
+                              IsChecked="{Binding ShowTranslation, Mode=TwoWay}" />
+                    <CheckBox Margin="0,0,18,4"
+                              Foreground="#E6FFFFFF"
                               Content="{loc:Tr Controls_Glow}"
                               IsChecked="{Binding GlowEnabled, Mode=TwoWay}" />
                     <CheckBox Margin="0,0,0,4"

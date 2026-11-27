@@ -7,7 +7,8 @@ namespace FloatSpotify.Playback;
 
 internal sealed class LyricsCache
 {
-    private const string CacheVersion = "v6";
+    // v7: entries carry per-line translations.
+    private const string CacheVersion = "v7";
 
     private readonly string _cacheDirectory;
 

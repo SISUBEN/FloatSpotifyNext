@@ -30,6 +30,7 @@ internal static class TtmlParser
             var words = new List<TimedWord>();
             var text = new System.Text.StringBuilder();
             var complete = true;
+            string? translation = null;
             void Visit(XElement element)
             {
                 foreach (var node in element.Nodes())
@@ -44,10 +45,15 @@ internal static class TtmlParser
                     }
                     else if (node is XElement span)
                     {
-                        // Translation/background vocals require a multi-lane renderer;
-                        // do not splice them into the foreground word timeline.
-                        if (span.Attributes().Any(a => a.Name.LocalName == "role" &&
-                            (a.Value == "x-bg" || a.Value == "x-translation" || a.Value == "x-roman")))
+                        // Translation/background vocals never join the foreground word timeline;
+                        // an inline translation is kept as the line's secondary text.
+                        var role = span.Attributes().FirstOrDefault(a => a.Name.LocalName == "role")?.Value;
+                        if (role == "x-translation")
+                        {
+                            translation = translation is null ? span.Value : translation + span.Value;
+                            continue;
+                        }
+                        if (role is "x-bg" or "x-roman")
                             continue;
                         if (span.Name.LocalName == "br")
                         {
@@ -72,7 +78,12 @@ internal static class TtmlParser
             if (!complete || string.Concat(words.Select(w => w.Text)) != text.ToString() ||
                 words.Zip(words.Skip(1)).Any(pair => pair.First.End > pair.Second.Start))
                 words.Clear();
-            result.Add(new TimedLyric(start, text.ToString()) { End = end, Words = words });
+            result.Add(new TimedLyric(start, text.ToString())
+            {
+                End = end,
+                Words = words,
+                Translation = LyricTranslations.Normalize(translation, text.ToString())
+            });
         }
         return result.OrderBy(line => line.At).ToArray();
     }

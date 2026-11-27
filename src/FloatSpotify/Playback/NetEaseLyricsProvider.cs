@@ -109,7 +109,22 @@ internal sealed class NetEaseLyricsProvider : ILyricsProvider
             return Array.Empty<TimedLyric>();
         }
 
-        return LrcParser.Parse(lyricElement.GetString(), stripCredits: true);
+        var lyrics = LrcParser.Parse(lyricElement.GetString(), stripCredits: true);
+        return WithTranslation(lyrics, root);
+    }
+
+    internal static IReadOnlyList<TimedLyric> WithTranslation(IReadOnlyList<TimedLyric> lyrics, JsonElement root)
+    {
+        if (lyrics.Count == 0 ||
+            !root.TryGetProperty("tlyric", out var tlyric) ||
+            !tlyric.TryGetProperty("lyric", out var translationElement) ||
+            translationElement.ValueKind != JsonValueKind.String)
+        {
+            return lyrics;
+        }
+
+        var translations = LrcParser.Parse(translationElement.GetString());
+        return LyricTranslations.Attach(lyrics, translations, line => line.Text) ?? lyrics;
     }
 
     private static int ScoreCandidate(

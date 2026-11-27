@@ -8,6 +8,8 @@ public sealed record TimedLyric(TimeSpan At, string Text)
     public TimeSpan? End { get; init; }
     public bool IsPlainText { get; init; }
     public bool IsEstimatedTiming { get; init; }
+    /// <summary>Provider-supplied translation shown beneath the original line.</summary>
+    public string? Translation { get; init; }
     public IReadOnlyList<TimedWord> Words { get; init; } = Array.Empty<TimedWord>();
 }
 

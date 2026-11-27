@@ -1,4 +1,6 @@
 using System.Globalization;
+using System.Text;
+using System.Text.Json;
 using System.Text.RegularExpressions;
 
 namespace FloatSpotify.Playback;
@@ -11,6 +13,10 @@ internal static class KrcParser
 
     private static readonly Regex WordPattern = new(
         @"<(?<offset>\d+),(?<duration>\d+),\d+>",
+        RegexOptions.Compiled | RegexOptions.CultureInvariant);
+
+    private static readonly Regex LanguagePattern = new(
+        @"^\[language:(?<payload>[A-Za-z0-9+/=\s]+)\]\s*$",
         RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     private static readonly Regex OffsetPattern = new(
@@ -42,12 +48,16 @@ internal static class KrcParser
         }
 
         var offset = TimeSpan.FromMilliseconds(offsetMilliseconds);
+        var translations = ReadTranslations(sourceLines);
         var result = new List<TimedLyric>();
+        var lineIndex = -1;
         foreach (var sourceLine in sourceLines)
         {
             var match = LinePattern.Match(sourceLine);
             if (!match.Success)
                 continue;
+            // The embedded translation table is indexed by every timed KRC line, credits included.
+            lineIndex++;
             if (!long.TryParse(
                     match.Groups["start"].Value,
                     NumberStyles.None,
@@ -71,7 +81,13 @@ internal static class KrcParser
             if (at < TimeSpan.Zero)
                 at = TimeSpan.Zero;
 
-            result.Add(new TimedLyric(at, text) { Words = ParseWords(body, at) });
+            result.Add(new TimedLyric(at, text)
+            {
+                Words = ParseWords(body, at),
+                Translation = lineIndex < translations.Count
+                    ? LyricTranslations.Normalize(translations[lineIndex], text)
+                    : null
+            });
         }
 
         var sorted = result
@@ -89,6 +105,57 @@ internal static class KrcParser
         }
 
         return sorted;
+    }
+
+    /// <summary>
+    /// Reads the <c>[language:base64-json]</c> tag; content entries of type 1 hold one
+    /// translated line per timed lyric line.
+    /// </summary>
+    internal static IReadOnlyList<string?> ReadTranslations(IEnumerable<string> sourceLines)
+    {
+        foreach (var sourceLine in sourceLines)
+        {
+            var match = LanguagePattern.Match(sourceLine);
+            if (!match.Success)
+                continue;
+
+            try
+            {
+                var json = Encoding.UTF8.GetString(Convert.FromBase64String(match.Groups["payload"].Value.Trim()));
+                using var document = JsonDocument.Parse(json);
+                if (!document.RootElement.TryGetProperty("content", out var content) ||
+                    content.ValueKind != JsonValueKind.Array)
+                {
+                    return Array.Empty<string?>();
+                }
+
+                foreach (var entry in content.EnumerateArray())
+                {
+                    if (!entry.TryGetProperty("type", out var type) ||
+                        type.ValueKind != JsonValueKind.Number || type.GetInt32() != 1 ||
+                        !entry.TryGetProperty("lyricContent", out var lines) ||
+                        lines.ValueKind != JsonValueKind.Array)
+                    {
+                        continue;
+                    }
+
+                    return lines.EnumerateArray()
+                        .Select(line => line.ValueKind == JsonValueKind.Array
+                            ? string.Concat(line.EnumerateArray()
+                                .Where(part => part.ValueKind == JsonValueKind.String)
+                                .Select(part => part.GetString()))
+                            : null)
+                        .ToArray();
+                }
+            }
+            catch (Exception ex) when (ex is FormatException or JsonException or InvalidOperationException)
+            {
+            }
+
+            return Array.Empty<string?>();
+        }
+
+        return Array.Empty<string?>();
     }
 
     private static IReadOnlyList<TimedWord> ParseWords(string body, TimeSpan at)

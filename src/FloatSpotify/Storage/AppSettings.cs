@@ -20,6 +20,7 @@ public sealed class AppSettings
     public string TextColor { get; set; } = "#FFFFFFFF";
     public bool GlowEnabled { get; set; } = true;
     public bool ShowNextLine { get; set; } = true;
+    public bool ShowTranslation { get; set; } = true;
     public bool AlwaysOnTop { get; set; } = true;
     public bool IsLocked { get; set; }
     public double LyricOffsetSeconds { get; set; }

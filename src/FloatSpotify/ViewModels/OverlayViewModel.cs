@@ -22,6 +22,9 @@ public sealed class OverlayViewModel : ObservableObject
     private string _artist = "Rewrite preview";
     private string _currentLine = Loc.T("Overlay_Connecting");
     private string _nextLine = string.Empty;
+    private string? _currentTranslation;
+    private string? _translationTrackKey;
+    private bool _trackHasTranslation;
     private string? _statusMessage;
     private bool _isPlaying = true;
     private bool _isSettingsOpen;
@@ -204,6 +207,7 @@ public sealed class OverlayViewModel : ObservableObject
             if (Math.Abs(_settings.FontSize - normalized) < 0.01) return;
             _settings.FontSize = normalized;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(TranslationFontSize));
             PersistSettings();
         }
     }
@@ -226,7 +230,9 @@ public sealed class OverlayViewModel : ObservableObject
         }
     }
 
-    public string ResolvedFontFamily => $"{FontFamilyName}, Global User Interface";
+    public double TranslationFontSize => Math.Round(FontSize * 0.6, 1);
+
+    public string ResolvedFontFamily =>$"{FontFamilyName}, Global User Interface";
 
     public double OverlayWidth
     {
@@ -326,9 +332,39 @@ public sealed class OverlayViewModel : ObservableObject
             if (_settings.ShowNextLine == value) return;
             _settings.ShowNextLine = value;
             OnPropertyChanged();
+            OnPropertyChanged(nameof(IsNextLineVisible));
             PersistSettings();
         }
     }
+
+    public bool ShowTranslation
+    {
+        get => _settings.ShowTranslation;
+        set
+        {
+            if (_settings.ShowTranslation == value) return;
+            _settings.ShowTranslation = value;
+            OnPropertyChanged();
+            OnPropertyChanged(nameof(CurrentTranslation));
+            OnPropertyChanged(nameof(HasCurrentTranslation));
+            OnPropertyChanged(nameof(IsNextLineVisible));
+            PersistSettings();
+            ApplyLyricsSourceConfiguration();
+        }
+    }
+
+    /// <summary>
+    /// The translation lane takes the next line's place for the whole track, so the layout
+    /// does not jump when an individual line has no translation.
+    /// </summary>
+    public bool IsNextLineVisible => ShowNextLine && !(ShowTranslation && _trackHasTranslation);
+
+    public string? CurrentTranslation
+    {
+        get => ShowTranslation ? _currentTranslation : null;
+    }
+
+    public bool HasCurrentTranslation => !string.IsNullOrWhiteSpace(CurrentTranslation);
 
     public bool AlwaysOnTop
     {
@@ -507,6 +543,22 @@ public sealed class OverlayViewModel : ObservableObject
         Artist = frame.Artist;
         CurrentLine = frame.CurrentLine;
         NextLine = frame.NextLine;
+        var translation = frame.ActiveLyric?.Translation;
+        var trackKey = $"{frame.Artist}\n{frame.Track}";
+        var hasTranslation = (_translationTrackKey == trackKey && _trackHasTranslation) ||
+                             !string.IsNullOrWhiteSpace(translation);
+        _translationTrackKey = trackKey;
+        if (_trackHasTranslation != hasTranslation)
+        {
+            _trackHasTranslation = hasTranslation;
+            OnPropertyChanged(nameof(IsNextLineVisible));
+        }
+        if (_currentTranslation != translation)
+        {
+            _currentTranslation = translation;
+            OnPropertyChanged(nameof(CurrentTranslation));
+            OnPropertyChanged(nameof(HasCurrentTranslation));
+        }
         IsPlaying = frame.IsPlaying;
         LyricFrame = frame;
         OnPropertyChanged(nameof(LyricFrame));
@@ -570,7 +622,8 @@ public sealed class OverlayViewModel : ObservableObject
             LyricsSources
                 .Where(item => item.Enabled)
                 .Select(item => item.Source)
-                .ToArray());
+                .ToArray(),
+            waitForTranslations: ShowTranslation);
     }
 
     private void PersistSettings()

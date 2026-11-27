@@ -83,6 +83,36 @@
                 </local:KaraokeText>
                 </ScrollViewer>
 
+                <local:KaraokeText x:Name="TranslationText"
+                           Frame="{Binding LyricFrame}"
+                           ShowsTranslation="True"
+                           Margin="0,2,0,0"
+                           Foreground="{Binding TextColor}"
+                           Opacity="0.85"
+                           FontFamily="{Binding ResolvedFontFamily}"
+                           FontSize="{Binding TranslationFontSize}"
+                           FontWeight="Normal"
+                           TextOptions.TextFormattingMode="Display"
+                           Visibility="{Binding HasCurrentTranslation, Converter={StaticResource BooleanToVisibilityConverter}}">
+                    <local:KaraokeText.Style>
+                        <Style TargetType="local:KaraokeText">
+                            <Setter Property="Effect" Value="{x:Null}" />
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding GlowEnabled}" Value="True">
+                                    <Setter Property="Effect">
+                                        <Setter.Value>
+                                            <DropShadowEffect Color="#E6000000"
+                                                              BlurRadius="8"
+                                                              ShadowDepth="1"
+                                                              Opacity="0.9" />
+                                        </Setter.Value>
+                                    </Setter>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </local:KaraokeText.Style>
+                </local:KaraokeText>
+
                 <TextBlock x:Name="NextLyricText"
                            Text="{Binding NextLine}"
                            Margin="0,3,0,0"
@@ -93,7 +123,7 @@
                            FontWeight="Normal"
                            TextAlignment="Center"
                            TextWrapping="Wrap"
-                           Visibility="{Binding ShowNextLine, Converter={StaticResource BooleanToVisibilityConverter}}">
+                           Visibility="{Binding IsNextLineVisible, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <TextBlock.LayoutTransform>
                         <ScaleTransform ScaleX="0.72" ScaleY="0.72" />
                     </TextBlock.LayoutTransform>

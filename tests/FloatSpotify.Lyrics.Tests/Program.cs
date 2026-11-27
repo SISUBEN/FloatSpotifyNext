@@ -191,6 +191,49 @@ internal static class Program
             "KRC offset tag shifts the timeline");
         Check(KrcParser.Parse("[00:01]Plain LRC").Count == 0, "Plain LRC is not mistaken for KRC");
 
+        var krcLanguage = Convert.ToBase64String(Encoding.UTF8.GetBytes(JsonSerializer.Serialize(new
+        {
+            content = new object[]
+            {
+                new { language = 0, type = 0, lyricContent = new[] { new[] { "ro" }, new[] { "ma" }, new[] { "ji" } } },
+                new { language = 0, type = 1, lyricContent = new[] { new[] { "" }, new[] { "你好世界" }, new[] { "下一句" } } }
+            },
+            version = 1
+        })));
+        var krcTranslated = KrcParser.Parse(
+            $"[language:{krcLanguage}]\n[0,1000]<0,100,0>作词 : 名字\n[1000,2000]<0,300,0>Hello <300,300,0>world\n[4000,1000]<0,500,0>Next",
+            stripCredits: true);
+        Check(krcTranslated.Count == 2 && krcTranslated[0].Translation == "你好世界" &&
+              krcTranslated[1].Translation == "下一句" && krcTranslated[0].Words.Count == 2,
+            "KRC embedded translation aligns by line index, credits included");
+        Check(KrcParser.Parse("[language:!!notbase64]\n[0,1000]<0,100,0>A")[0].Translation is null,
+            "Malformed KRC translation tag is ignored");
+
+        using (var netEase = JsonDocument.Parse(JsonSerializer.Serialize(new
+               {
+                   tlyric = new { lyric = "[by:someone]\n[00:01.00]你好\n[00:04.00]//\n[00:08.00]再见" }
+               })))
+        {
+            var original = LrcParser.Parse("[00:01.00]Hello\n[00:04.00]Interlude line\n[00:08.00]Goodbye");
+            var withTranslation = NetEaseLyricsProvider.WithTranslation(original, netEase.RootElement);
+            Check(withTranslation[0].Translation == "你好" && withTranslation[1].Translation is null &&
+                  withTranslation[2].Translation == "再见",
+                "NetEase tlyric attaches by timestamp and drops placeholder lines");
+        }
+
+        var ttmlTranslated = TtmlParser.Parse("<tt xmlns:ttm='urn:test'><p begin='1' end='3'><span begin='1' end='2'>Hello</span><span ttm:role='x-translation'>你好</span></p></tt>").Single();
+        Check(ttmlTranslated.Text == "Hello" && ttmlTranslated.Words.Count == 1 && ttmlTranslated.Translation == "你好",
+            "TTML inline translation becomes the secondary lane, not foreground words");
+
+        var donor = LrcParser.Parse("[00:01.20]Hello\n[00:05]World").Select(l => l with { Translation = "译" + l.Text }).ToArray();
+        var aligned = LyricTranslations.Attach(LrcParser.Parse("[00:01]<00:01>Hel<00:02>lo<00:03>\n[00:05]World\n[00:09]Tail", duration: S(10)), donor, l => l.Translation);
+        Check(aligned is not null && aligned[0].Translation == "译Hello" && aligned[0].Words.Count == 2 &&
+              aligned[2].Translation is null,
+            "Cross-source translation aligns within tolerance and keeps word timing");
+        var otherEdit = LrcParser.Parse("[00:20]Hello\n[00:40]World").Select(l => l with { Translation = "译" }).ToArray();
+        Check(LyricTranslations.Attach(LrcParser.Parse("[00:01]Hello\n[00:05]World"), otherEdit, l => l.Translation) is null,
+            "Translation from a misaligned edit is rejected");
+
         Check(LyricsMatchScore.Score("Shape of You", "Ed Sheeran", 233, "Shape of You", "Ed Sheeran", S(233)) == 100,
             "Exact title, artist and duration score full marks");
         Check(LyricsMatchScore.Score("Shape of You", "Ed Sheeran", 300, "Shape of You", "Ed Sheeran", S(233)) == 50,
@@ -302,6 +345,38 @@ internal static class Program
         pendingEnhancement.SetResult(words);
         await pendingLookup;
         Check(published.Count == 2 && published[1][0].Words.Count > 0, "Successful word enhancement replaces provisional lines");
+
+        var translatedLines = LrcParser.Parse("[00:01]AB").Select(l => l with { Translation = "甲乙" }).ToArray();
+        var pendingTranslation = new TaskCompletionSource<IReadOnlyList<TimedLyric>>(TaskCreationOptions.RunContinuationsAsynchronously);
+        var translationUpdates = new List<IReadOnlyList<TimedLyric>>();
+        coordinator = new LyricsCoordinator(new ILyricsProvider[]
+        {
+            new FakeProvider(LyricsSource.Karalyr, _ => Task.FromResult(words)),
+            new FakeProvider(LyricsSource.NetEase, _ => pendingTranslation.Task)
+        });
+        coordinator.ApplyConfiguration(new[] { LyricsSource.Karalyr, LyricsSource.NetEase }, waitForTranslations: true);
+        var translationLookup = coordinator.GetAsync("bilingual", "artist", S(10), default, translationUpdates.Add);
+        Check(!translationLookup.IsCompleted && translationUpdates.Count == 1 && translationUpdates[0][0].Words.Count == 2,
+            "Word lyrics show immediately while a translation source is still pending");
+        pendingTranslation.SetResult(translatedLines);
+        var bilingual = await translationLookup;
+        Check(bilingual[0].Words.Count == 2 && bilingual[0].Translation == "甲乙" && translationUpdates.Count == 2,
+            "Late translation lane is merged onto the word-level winner");
+        coordinator = new LyricsCoordinator(new ILyricsProvider[]
+        {
+            new FakeProvider(LyricsSource.NetEase, _ => Task.FromResult<IReadOnlyList<TimedLyric>>(translatedLines)),
+            new FakeProvider(LyricsSource.Karalyr, async token => { await Task.Delay(200, token); return words; })
+        });
+        coordinator.ApplyConfiguration(new[] { LyricsSource.NetEase, LyricsSource.Karalyr });
+        var upgradedBilingual = await coordinator.GetAsync("bilingual-upgrade", "artist", S(10), default);
+        Check(upgradedBilingual[0].Words.Count == 2 && upgradedBilingual[0].Translation == "甲乙",
+            "Word upgrade keeps an earlier source's translation");
+        var revisionBeforeToggle = coordinator.Revision;
+        coordinator.ApplyConfiguration(new[] { LyricsSource.NetEase, LyricsSource.Karalyr }, waitForTranslations: true);
+        Check(coordinator.Revision == revisionBeforeToggle + 1, "Turning translations on refreshes active lyrics");
+        await cache.WriteAsync(LyricsSource.NetEase, "bilingual", "artist", translatedLines, default, S(10));
+        Check((await cache.TryReadAsync(LyricsSource.NetEase, "bilingual", "artist", default, S(10)))![0].Translation == "甲乙",
+            "Disk cache round-trips translations");
         using var plainClient = new HttpClient(new FakeHandler(() => new HttpResponseMessage(HttpStatusCode.OK)
         { Content = new StringContent("{\"syncedLyrics\":null,\"plainLyrics\":\"First line\\nSecond line\"}") }));
         var plainResult = await new LrclibLyricsProvider(plainClient, cache).GetAsync("plain", "artist", S(10), default);
@@ -317,7 +392,7 @@ internal static class Program
         Check(restored![0].Words[1] == words[0].Words[1], "Disk cache round-trips word times and text");
         Check(await cache.TryReadAsync(LyricsSource.Karalyr, "track", "artist", default, S(15)) is null, "Duration-separated cache keys");
         Check(await cache.TryReadAsync(LyricsSource.BetterLyrics, "track", "artist", default, S(10)) is null, "Provider-separated cache keys");
-        var cachePath = Directory.GetFiles(directory, "v6-Karalyr-*.json").Single();
+        var cachePath = Directory.GetFiles(directory, "v7-Karalyr-*.json").Single();
         File.SetLastWriteTimeUtc(cachePath, DateTime.UtcNow.AddDays(-8));
         Check(await cache.TryReadAsync(LyricsSource.Karalyr, "track", "artist", default, S(10)) is null, "Expired cache refreshes");
         await File.WriteAllTextAsync(cachePath, "broken json");
@@ -700,6 +775,24 @@ internal static class Program
         Check(text.ActualHeight > 80, "Narrow overlay wraps without dropping words");
         var plain = new TimedLyric(S(0), "Line fallback");
         Check(Render(0, "07-line.png", lyric: plain).SequenceEqual(Render(5, "08-line-later.png", lyric: plain)), "Line fallback has no fake sweep");
+
+        Check(Math.Abs(KaraokeText.LineProgress(line.Words, S(0)) - 0) < 1e-9 &&
+              Math.Abs(KaraokeText.LineProgress(line.Words, S(5)) - 1) < 1e-9 &&
+              Math.Abs(KaraokeText.LineProgress(line.Words, S(2)) - 6.0 / 19) < 1e-9,
+            "Translation sweep follows the original line's character-weighted progress");
+        var bilingual = line with { Translation = "你好世界，一起唱吧" };
+        text.ShowsTranslation = true;
+        text.FontSize = 28;
+        var laneBefore = Render(0, "09-translation-before.png", lyric: bilingual);
+        var laneMiddle = Render(2.5, "10-translation-mid.png", lyric: bilingual);
+        var laneEnd = Render(5, "11-translation-complete.png", lyric: bilingual);
+        Check(Alpha(laneBefore) > 0 && Alpha(laneBefore) < Alpha(laneMiddle) && Alpha(laneMiddle) < Alpha(laneEnd),
+            "Translation lane sweeps with the original word timeline");
+        Check(Render(0, "12-translation-line.png", lyric: plain with { Translation = "逐行译文" })
+                .SequenceEqual(Render(5, "13-translation-line-later.png", lyric: plain with { Translation = "逐行译文" })),
+            "Line-synced translation has no fake sweep");
+        text.ShowsTranslation = false;
+        text.FontSize = 46;
         Console.WriteLine("Render evidence: " + Path.GetFullPath(directory));
     }
 
